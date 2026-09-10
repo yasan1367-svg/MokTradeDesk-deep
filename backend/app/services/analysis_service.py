@@ -1,8 +1,7 @@
 from sqlalchemy.orm import Session
 from typing import Dict, List, Any
 
-
-from ..models.strategy import Trade, AnalysisResult, CustomTimeInterval, TimePoint
+from ..models.strategy import Trade, AnalysisResult, CustomTimeInterval
 
 
 class AnalysisService:
@@ -22,7 +21,6 @@ class AnalysisService:
         weekday_analysis = self._analyze_by_weekday(trades)
         hour_analysis = self._analyze_by_hour(trades)
         custom_time_analysis = self._analyze_by_custom_intervals(trades)
-        time_point_analysis = self._analyze_by_time_points(trades)
 
         existing = self.db.query(AnalysisResult).filter(
             AnalysisResult.version_id == version_id
@@ -43,7 +41,6 @@ class AnalysisService:
             weekday_analysis=weekday_analysis,
             hour_analysis=hour_analysis,
             custom_time_analysis=custom_time_analysis,
-            time_point_analysis=time_point_analysis,
         )
         self.db.add(result)
         self.db.commit()
@@ -51,6 +48,9 @@ class AnalysisService:
 
         return result
 
+    # ─────────────────────────────────────────────
+    # متریک‌های پایه
+    # ─────────────────────────────────────────────
     def _calculate_basic_metrics(self, trades: List[Trade]) -> Dict[str, Any]:
         total = len(trades)
         wins = [t for t in trades if t.pnl and t.pnl > 0]
@@ -78,6 +78,7 @@ class AnalysisService:
         }
 
     def _calculate_max_drawdown(self, trades: List[Trade]) -> float:
+        """محاسبه‌ی حداکثر افت سرمایه"""
         sorted_trades = sorted(trades, key=lambda t: t.close_time or t.open_time)
         equity = 0
         peak = 0
@@ -93,7 +94,11 @@ class AnalysisService:
 
         return max_dd
 
+    # ─────────────────────────────────────────────
+    # تحلیل‌های تفکیکی
+    # ─────────────────────────────────────────────
     def _analyze_by_session(self, trades: List[Trade]) -> Dict[str, Any]:
+        """تحلیل بر اساس سشن (آسیا، اروپا، آمریکا)"""
         sessions = {"Asia": [], "Europe": [], "America": [], "Other": []}
 
         for t in trades:
@@ -112,6 +117,7 @@ class AnalysisService:
         return {name: self._summarize(trades) for name, trades in sessions.items() if trades}
 
     def _analyze_by_weekday(self, trades: List[Trade]) -> Dict[str, Any]:
+        """تحلیل بر اساس روز هفته"""
         weekdays = {
             0: "Monday", 1: "Tuesday", 2: "Wednesday",
             3: "Thursday", 4: "Friday", 5: "Saturday", 6: "Sunday"
@@ -127,6 +133,7 @@ class AnalysisService:
         return {name: self._summarize(trades) for name, trades in by_day.items() if trades}
 
     def _analyze_by_hour(self, trades: List[Trade]) -> Dict[str, Any]:
+        """تحلیل بر اساس ساعت (۰ تا ۲۳)"""
         by_hour = {str(h): [] for h in range(24)}
 
         for t in trades:
@@ -149,7 +156,6 @@ class AnalysisService:
             for t in trades:
                 if not t.close_time:
                     continue
-                # ✅ فیلتر نماد: فقط معاملاتی که symbol آنها با symbol بازه یکسان است
                 if t.symbol != interval.symbol:
                     continue
                 hour = t.close_time.hour
@@ -165,29 +171,11 @@ class AnalysisService:
 
         return result
 
-    def _analyze_by_time_points(self, trades: List[Trade]) -> Dict[str, Any]:
-        """تحلیل بر اساس تایم‌پوینت‌ها (با فیلتر symbol)"""
-        points = self.db.query(TimePoint).filter(TimePoint.is_active == 1).all()
-
-        result = {}
-        for point in points:
-            matched = []
-            for t in trades:
-                if not t.close_time:
-                    continue
-                # ✅ فیلتر نماد
-                if t.symbol != point.symbol:
-                    continue
-                if t.close_time.hour == point.hour and abs(t.close_time.minute - point.minute) <= 5:
-                    matched.append(t)
-
-            if matched:
-                key = f"{point.hour:02d}:{point.minute:02d}"
-                result[key] = self._summarize(matched)
-
-        return result
-
+    # ─────────────────────────────────────────────
+    # خلاصه‌سازی
+    # ─────────────────────────────────────────────
     def _summarize(self, trades: List[Trade]) -> Dict[str, Any]:
+        """خلاصه‌ی متریک‌های یک گروه از معاملات"""
         total = len(trades)
         wins = [t for t in trades if t.pnl and t.pnl > 0]
         losses = [t for t in trades if t.pnl and t.pnl < 0]

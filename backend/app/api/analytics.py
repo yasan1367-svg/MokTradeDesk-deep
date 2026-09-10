@@ -4,10 +4,9 @@ from typing import List
 
 from ..core.database import get_db
 from ..services.analysis_service import AnalysisService
-from ..models.strategy import AnalysisResult, CustomTimeInterval, TimePoint
+from ..models.strategy import AnalysisResult, CustomTimeInterval
 from ..schemas.analytics import (
-    CustomTimeIntervalCreate, CustomTimeIntervalResponse,
-    TimePointCreate, TimePointResponse
+    CustomTimeIntervalCreate, CustomTimeIntervalResponse
 )
 
 router = APIRouter()
@@ -58,7 +57,6 @@ def get_analysis(version_id: int, db: Session = Depends(get_db)):
         "weekday_analysis": result.weekday_analysis,
         "hour_analysis": result.hour_analysis,
         "custom_time_analysis": result.custom_time_analysis,
-        "time_point_analysis": result.time_point_analysis,
         "created_at": result.created_at,
     }
 
@@ -99,50 +97,7 @@ def delete_interval(interval_id: int, db: Session = Depends(get_db)):
 
 
 # ═════════════════════════════════════════════
-# TimePoint (تایم‌پوینت‌ها)
-# ═════════════════════════════════════════════
-@router.get("/time-points/", response_model=List[TimePointResponse])
-def get_time_points(symbol: str = None, db: Session = Depends(get_db)):
-    """دریافت لیست تایم‌پوینت‌ها"""
-    query = db.query(TimePoint)
-    if symbol:
-        query = query.filter(TimePoint.symbol == symbol)
-    return query.all()
-
-
-@router.post("/time-points/", response_model=TimePointResponse)
-def create_time_point(point: TimePointCreate, db: Session = Depends(get_db)):
-    """ایجاد تایم‌پوینت جدید"""
-    existing = db.query(TimePoint).filter(
-        TimePoint.symbol == point.symbol,
-        TimePoint.hour == point.hour,
-        TimePoint.minute == point.minute
-    ).first()
-    if existing:
-        raise HTTPException(
-            status_code=400,
-            detail=f"تایم‌پوینت {point.hour:02d}:{point.minute:02d} برای {point.symbol} قبلاً ثبت شده است"
-        )
-    db_point = TimePoint(**point.model_dump())
-    db.add(db_point)
-    db.commit()
-    db.refresh(db_point)
-    return db_point
-
-
-@router.delete("/time-points/{point_id}")
-def delete_time_point(point_id: int, db: Session = Depends(get_db)):
-    """حذف یک تایم‌پوینت"""
-    db_point = db.query(TimePoint).filter(TimePoint.id == point_id).first()
-    if not db_point:
-        raise HTTPException(status_code=404, detail="تایم‌پوینت یافت نشد")
-    db.delete(db_point)
-    db.commit()
-    return {"message": "تایم‌پوینت با موفقیت حذف شد"}
-
-
-# ═════════════════════════════════════════════
-# Bulk Import (وارد کردن داده‌های اولیه)
+# Seed (وارد کردن داده‌های اولیه)
 # ═════════════════════════════════════════════
 @router.post("/intervals/seed-gold")
 def seed_gold_intervals(db: Session = Depends(get_db)):
