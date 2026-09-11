@@ -2,9 +2,11 @@ import { useState } from 'react';
 import StatCard from './components/StatCard';
 import GlassCard from './components/GlassCard';
 import ImportPage from './pages/ImportPage';
+import AnalysisPage from './pages/AnalysisPage';
+import PropPage from './pages/PropPage';
 import { compareVersions } from './api/client';
 
-type Page = 'dashboard' | 'import';
+type Page = 'dashboard' | 'import' | 'analysis' | 'prop';
 
 function App() {
   const [page, setPage] = useState<Page>('dashboard');
@@ -27,38 +29,33 @@ function App() {
 
   return (
     <div className="min-h-screen p-6">
-      {/* Header + Navigation */}
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold bg-gradient-to-l from-accent to-profit bg-clip-text text-transparent">
           🚀 MokTradeDesk
         </h1>
 
-        {/* Navigation */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setPage('dashboard')}
-            className={`px-5 py-2 rounded-xl transition-all ${
-              page === 'dashboard'
-                ? 'bg-accent text-white'
-                : 'glass-card text-text-secondary hover:text-text-primary'
-            }`}
-          >
-            📊 داشبورد
-          </button>
-          <button
-            onClick={() => setPage('import')}
-            className={`px-5 py-2 rounded-xl transition-all ${
-              page === 'import'
-                ? 'bg-accent text-white'
-                : 'glass-card text-text-secondary hover:text-text-primary'
-            }`}
-          >
-            📥 واردات
-          </button>
+        <div className="flex gap-2 flex-wrap">
+          {[
+            { key: 'dashboard', label: '📊 داشبورد' },
+            { key: 'analysis', label: '📈 تحلیل' },
+            { key: 'prop', label: '🏢 پراپ' },
+            { key: 'import', label: '📥 واردات' },
+          ].map((item) => (
+            <button
+              key={item.key}
+              onClick={() => setPage(item.key as Page)}
+              className={`px-5 py-2 rounded-xl transition-all ${
+                page === item.key
+                  ? 'bg-accent text-white'
+                  : 'glass-card text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Page Content */}
       {page === 'dashboard' && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
@@ -125,22 +122,11 @@ function App() {
               </>
             )}
           </GlassCard>
-
-          <GlassCard>
-            <h2 className="text-xl font-bold mb-4">📈 منحنی سرمایه (به‌زودی)</h2>
-            <div className="h-40 bg-gradient-to-t from-profit/10 to-transparent rounded-2xl flex items-end justify-around p-4">
-              {[40, 70, 30, 90, 55, 80, 45].map((h, i) => (
-                <div
-                  key={i}
-                  className="w-3 bg-gradient-to-t from-profit to-profit/50 rounded-full"
-                  style={{ height: `${h}%` }}
-                />
-              ))}
-            </div>
-          </GlassCard>
         </>
       )}
 
+      {page === 'analysis' && <AnalysisPage />}
+      {page === 'prop' && <PropPage />}
       {page === 'import' && <ImportPage />}
     </div>
   );

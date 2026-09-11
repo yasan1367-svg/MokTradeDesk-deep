@@ -57,3 +57,50 @@ export const importMT4 = (file: File, versionId?: number, testType?: string) => 
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 };
+
+// ─────────────────────────────────────────────
+// Analytics Detail
+// ─────────────────────────────────────────────
+export const getVersionTrades = (versionId: number) =>
+  api.get(`/api/strategies/versions/${versionId}/trades`);
+
+export const getVersionAnalysis = (versionId: number) =>
+  api.get(`/api/analytics/${versionId}`);
+
+// ─────────────────────────────────────────────
+// Prop Desk
+// ─────────────────────────────────────────────
+export const getPropFirms = () => api.get('/api/prop/firms');
+export const createPropFirm = (data: { name: string; default_profit_share?: number; website?: string }) =>
+  api.post('/api/prop/firms', data);
+
+export const getPropAccounts = () => api.get('/api/prop/accounts');
+export const createPropAccount = (data: {
+  prop_firm_id: number;
+  account_label: string;
+  account_number?: string;
+  currency?: string;
+  initial_balance?: number;
+  profit_target?: number;
+  max_daily_dd?: number;
+  max_total_dd?: number;
+  min_trading_days?: number;
+}) => api.post('/api/prop/accounts', data);
+export const getPropAccountDetail = (accountId: number) =>
+  api.get(`/api/prop/accounts/${accountId}`);
+
+export const passStage = (stageId: number, finalBalance?: number) =>
+  api.post(`/api/prop/stages/${stageId}/pass`, { final_balance: finalBalance });
+export const failStage = (stageId: number, failureReason: string, failureDetails?: string) =>
+  api.post(`/api/prop/stages/${stageId}/fail`, {
+    failure_reason: failureReason,
+    failure_details: failureDetails,
+  });
+export const withdrawFromStage = (stageId: number, amount: number, note?: string) =>
+  api.post(`/api/prop/stages/${stageId}/withdraw`, { amount, note });
+export const getStageWithdrawals = (stageId: number) =>
+  api.get(`/api/prop/stages/${stageId}/withdrawals`);
+
+// api export برای استفاده در کامپوننت‌ها
+export const getStageTrades = (stageId: number) =>
+  api.get(`/api/prop/stages/${stageId}/trades`);
