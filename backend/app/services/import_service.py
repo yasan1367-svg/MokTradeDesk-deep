@@ -1,6 +1,9 @@
+from typing import List, Dict, Any, Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any
+from bs4 import BeautifulSoup
+from ..models.strategy import Trade, TradeSource
+
 import json
 
 from ..models.strategy import Trade, TradeSource
@@ -131,3 +134,161 @@ class Soft4XImporter:
             else:
                 safe_data[key] = str(value)
         return safe_data
+
+    from bs4 import BeautifulSoup
+import re
+
+
+class MT4Importer:
+    """واردکننده فایل‌های HTML متاتریدر (فقط بخش Positions)"""
+
+    def __init__(self, db: Session):
+        self.db = db
+
+    def parse_html(self, html_content: str) -> List[Dict[str, Any]]:
+        """استخراج معاملات از بخش Positions"""
+        soup = BeautifulSoup(html_content, 'html.parser')
+
+        trades = []
+        rows = soup.find_all('tr')
+
+        print(f"🔍 تعداد کل ردیف‌ها: {len(rows)}")
+
+        in_positions_section = False
+        header_skipped = False
+
+        for idx, row in enumerate(rows):
+            row_text = row.get_text(strip=True)
+
+            # تشخیص شروع بخش Positions
+            if 'Positions' in row_text and row.find('th'):
+                in_positions_section = True
+                header_skipped = False
+                print(f"✅ بخش Positions پیدا شد در ردیف {idx}")
+                continue
+
+            # تشخیص پایان بخش Positions
+            if ('Orders' in row_text or 'Deals' in row_text) and row.find('th'):
+                in_positions_section = False
+                print(f"⏹️ پایان بخش Positions در ردیف {idx}")
+                continue
+
+            if not in_positions_section:
+                continue
+
+            # رد کردن ردیف هدر
+            if not header_skipped:
+                header_skipped = True
+                print(f"⏭️ ردیف هدر رد شد در ردیف {idx}")
+                continue
+
+            # استخراج ستون‌های قابل مشاهده (بدون class="hidden")
+            all_cells = row.find_all('td')
+            visible_cells = [
+                c for c in all_cells
+                if 'hidden' not in (c.get('class') or [])
+            ]
+
+            print(f"📊 ردیف {idx}: {len(all_cells)} ستون کل، {len(visible_cells)} ستون قابل مشاهده")
+
+            # پردازش ردیف‌های معاملات (حداقل ۱۳ ستون قابل مشاهده)
+            if len(visible_cells) >= 13:
+                try:
+                    trade = self._parse_row(visible_cells)
+                    if trade:
+                        trades.append(trade)
+                        print(f"  ✅ معامله اضافه شد: {trade['symbol']} | {trade['direction']} | {trade['pnl']}")
+                    else:
+                        print(f"  ⚠️ _parse_row مقدار None برگرداند")
+                except Exception as e:
+                    print(f"  ❌ خطا در پردازش ردیف: {e}")
+
+        print(f"🎯 مجموع معاملات استخراج‌شده: {len(trades)}")
+        return trades
+
+    def _parse_row(self, cells) -> Optional[Dict[str, Any]]:
+        """تبدیل یک ردیف جدول به دیکشنری معامله (فقط ستون‌های قابل مشاهده)"""
+        try:
+            open_time = self._to_datetime(cells[0].get_text(strip=True))
+            position = cells[1].get_text(strip=True)
+            symbol = cells[2].get_text(strip=True)
+            direction_raw = cells[3].get_text(strip=True).lower()
+            volume = float(cells[4].get_text(strip=True))
+            open_price = float(cells[5].get_text(strip=True).replace(',', ''))
+            sl = self._to_float(cells[6].get_text(strip=True))
+            tp = self._to_float(cells[7].get_text(strip=True))
+            close_time = self._to_datetime(cells[8].get_text(strip=True))
+            close_price = self._to_float(cells[9].get_text(strip=True))
+            commission = self._to_float(cells[10].get_text(strip=True)) or 0
+            swap = self._to_float(cells[11].get_text(strip=True)) or 0
+            profit = self._to_float(cells[12].get_text(strip=True)) or 0
+
+            if open_time is None:
+                print(f"  ⚠️ open_time None است برای: {cells[0].get_text(strip=True)}")
+                return None
+
+            direction = "buy" if "buy" in direction_raw else "sell"
+
+            return {
+                "symbol": symbol,
+                "direction": direction,
+                "open_time": open_time,
+                "close_time": close_time,
+                "open_price": open_price,
+                "close_price": close_price,
+                "size": volume,
+                "sl": sl,
+                "tp": tp,
+                "pnl": profit,
+                "r_multiple": None,
+                "commission": commission,
+                "swap": swap,
+                "entry_sequence": 1,
+                "source": TradeSource.MT4_IMPORT,
+                "raw_data": {
+                    "position": position,
+                    "raw_direction": direction_raw,
+                },
+            }
+        except Exception as e:
+            print(f"  ❌ خطای _parse_row: {e}")
+            return None
+
+    def save_trades(
+        self,
+        trades: List[Dict[str, Any]],
+        version_id: Optional[int] = None,
+        prop_stage_id: Optional[int] = None,
+    ) -> List[Trade]:
+        """ذخیره معاملات در دیتابیس"""
+        db_trades = []
+        for trade_data in trades:
+            db_trade = Trade(
+                version_id=version_id,
+                prop_stage_id=prop_stage_id,
+                **trade_data
+            )
+            self.db.add(db_trade)
+            db_trades.append(db_trade)
+
+        self.db.commit()
+        return db_trades
+
+    def _to_float(self, value: str) -> Optional[float]:
+        if not value or value in ['', '-', 'N/A']:
+            return None
+        try:
+            return float(value.replace(',', '').replace(' ', ''))
+        except:
+            return None
+
+    def _to_datetime(self, value: str) -> Optional[datetime]:
+        if not value:
+            return None
+        try:
+            return datetime.strptime(value.strip(), "%Y.%m.%d %H:%M:%S")
+        except:
+            try:
+                return datetime.strptime(value.strip(), "%Y.%m.%d %H:%M")
+            except:
+                return None

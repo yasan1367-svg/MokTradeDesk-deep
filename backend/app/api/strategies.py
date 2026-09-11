@@ -45,7 +45,25 @@ def create_version(strategy_id: int, version: VersionCreate, db: Session = Depen
         version_name=version.version_name,
         rules_note=version.rules_note
     )
+    
     db.add(db_version)
     db.commit()
     db.refresh(db_version)
     return db_version
+@router.get("/versions/all")
+def get_all_versions(db: Session = Depends(get_db)):
+    """دریافت لیست همه‌ی نسخه‌ها با نام استراتژی"""
+    from ..models.strategy import Strategy
+    versions = db.query(StrategyVersion).all()
+    result = []
+    for v in versions:
+        strategy = db.query(Strategy).filter(Strategy.id == v.strategy_id).first()
+        result.append({
+            "id": v.id,
+            "version_name": v.version_name,
+            "strategy_id": v.strategy_id,
+            "strategy_name": strategy.name if strategy else "نامشخص",
+            "status": v.status.value if hasattr(v.status, 'value') else str(v.status),
+            "created_at": v.created_at,
+        })
+    return result
