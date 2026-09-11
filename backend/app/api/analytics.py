@@ -6,7 +6,10 @@ from ..core.database import get_db
 from ..services.analysis_service import AnalysisService
 from ..models.strategy import AnalysisResult, CustomTimeInterval
 from ..schemas.analytics import (
-    CustomTimeIntervalCreate, CustomTimeIntervalResponse
+    CustomTimeIntervalCreate,
+    CustomTimeIntervalResponse,
+    VersionComparisonRequest,
+    VersionComparisonResponse,
 )
 
 router = APIRouter()
@@ -59,6 +62,22 @@ def get_analysis(version_id: int, db: Session = Depends(get_db)):
         "custom_time_analysis": result.custom_time_analysis,
         "created_at": result.created_at,
     }
+
+
+# ═════════════════════════════════════════════
+# مقایسه
+# ═════════════════════════════════════════════
+@router.post("/compare", response_model=VersionComparisonResponse)
+def compare_versions(request: VersionComparisonRequest, db: Session = Depends(get_db)):
+    """مقایسه‌ی چند نسخه و پیشنهاد بهترین"""
+    try:
+        service = AnalysisService(db)
+        result = service.compare_versions(request.version_ids)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"خطا در مقایسه: {str(e)}")
 
 
 # ═════════════════════════════════════════════

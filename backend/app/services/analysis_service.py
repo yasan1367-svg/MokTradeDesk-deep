@@ -1,7 +1,10 @@
 from sqlalchemy.orm import Session
 from typing import Dict, List, Any
 
-from ..models.strategy import Trade, AnalysisResult, CustomTimeInterval
+from ..models.strategy import (
+    Trade, AnalysisResult, CustomTimeInterval,
+    StrategyVersion, Strategy
+)
 
 
 class AnalysisService:
@@ -10,6 +13,9 @@ class AnalysisService:
     def __init__(self, db: Session):
         self.db = db
 
+    # ═════════════════════════════════════════════
+    # تحلیل یک نسخه
+    # ═════════════════════════════════════════════
     def analyze_version(self, version_id: int) -> AnalysisResult:
         """تحلیل کامل یک نسخه و ذخیره‌ی نتیجه"""
         trades = self.db.query(Trade).filter(Trade.version_id == version_id).all()
@@ -48,9 +54,81 @@ class AnalysisService:
 
         return result
 
-    # ─────────────────────────────────────────────
+    # ═════════════════════════════════════════════
+    # مقایسه‌ی چند نسخه
+    # ═════════════════════════════════════════════
+    def compare_versions(self, version_ids: List[int]) -> Dict[str, Any]:
+        """مقایسه‌ی چند نسخه و پیشنهاد بهترین"""
+        items = []
+        for vid in version_ids:
+            version = self.db.query(StrategyVersion).filter(
+                StrategyVersion.id == vid
+            ).first()
+            if not version:
+                continue
+
+            analysis = self.db.query(AnalysisResult).filter(
+                AnalysisResult.version_id == vid
+            ).first()
+            if not analysis:
+                continue
+
+            strategy = self.db.query(Strategy).filter(
+                Strategy.id == version.strategy_id
+            ).first()
+
+            score = self._calculate_score(analysis)
+
+            items.append({
+                "version_id": vid,
+                "version_name": version.version_name,
+                "strategy_name": strategy.name if strategy else "نامشخص",
+                "total_trades": analysis.total_trades,
+                "win_rate": analysis.win_rate,
+                "profit_factor": analysis.profit_factor,
+                "net_pnl": analysis.net_pnl,
+                "max_dd": analysis.max_dd,
+                "score": round(score, 2),
+            })
+
+        if not items:
+            raise ValueError("هیچ تحلیلی برای نسخه‌های انتخاب‌شده یافت نشد")
+
+        items.sort(key=lambda x: x["score"], reverse=True)
+        best = items[0]
+
+        recommendation = (
+            f"بر اساس ترکیب نرخ برد، فاکتور سود و حداقل افت سرمایه، "
+            f"نسخه‌ی «{best['version_name']}» از استراتژی «{best['strategy_name']}» "
+            f"با امتیاز {best['score']} بهترین عملکرد را داشته است."
+        )
+
+        return {
+            "items": items,
+            "best_version_id": best["version_id"],
+            "best_version_name": best["version_name"],
+            "recommendation": recommendation,
+        }
+
+    def _calculate_score(self, analysis: AnalysisResult) -> float:
+        """محاسبه‌ی امتیاز ترکیبی برای رتبه‌بندی"""
+        win_rate_score = min(analysis.win_rate, 100)
+        profit_factor_score = min(analysis.profit_factor * 20, 100)
+        net_pnl_score = min(max(analysis.net_pnl, 0) / 10, 100)
+        dd_penalty = min(analysis.max_dd / 10, 50)
+
+        score = (
+            win_rate_score * 0.35 +
+            profit_factor_score * 0.35 +
+            net_pnl_score * 0.30 -
+            dd_penalty * 0.20
+        )
+
+        return max(score, 0)
+
+    # ═════════════════════════════════════════════
     # متریک‌های پایه
-    # ─────────────────────────────────────────────
+    # ═════════════════════════════════════════════
     def _calculate_basic_metrics(self, trades: List[Trade]) -> Dict[str, Any]:
         total = len(trades)
         wins = [t for t in trades if t.pnl and t.pnl > 0]
@@ -94,9 +172,9 @@ class AnalysisService:
 
         return max_dd
 
-    # ─────────────────────────────────────────────
+    # ═════════════════════════════════════════════
     # تحلیل‌های تفکیکی
-    # ─────────────────────────────────────────────
+    # ═════════════════════════════════════════════
     def _analyze_by_session(self, trades: List[Trade]) -> Dict[str, Any]:
         """تحلیل بر اساس سشن (آسیا، اروپا، آمریکا)"""
         sessions = {"Asia": [], "Europe": [], "America": [], "Other": []}
@@ -171,9 +249,9 @@ class AnalysisService:
 
         return result
 
-    # ─────────────────────────────────────────────
+    # ═════════════════════════════════════════════
     # خلاصه‌سازی
-    # ─────────────────────────────────────────────
+    # ═════════════════════════════════════════════
     def _summarize(self, trades: List[Trade]) -> Dict[str, Any]:
         """خلاصه‌ی متریک‌های یک گروه از معاملات"""
         total = len(trades)

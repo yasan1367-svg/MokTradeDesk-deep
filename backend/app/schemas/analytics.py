@@ -1,8 +1,11 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 
+# ─────────────────────────────────────────────
+# CustomTimeInterval
+# ─────────────────────────────────────────────
 class CustomTimeIntervalCreate(BaseModel):
     name: str
     symbol: str
@@ -34,22 +37,27 @@ class CustomTimeIntervalResponse(BaseModel):
         from_attributes = True
 
 
-class TimePointCreate(BaseModel):
-    symbol: str
-    hour: int
-    minute: int
-    label: Optional[str] = None
-    is_active: int = 1
+# ─────────────────────────────────────────────
+# Comparison
+# ─────────────────────────────────────────────
+class VersionComparisonRequest(BaseModel):
+    version_ids: List[int]
 
 
-class TimePointResponse(BaseModel):
-    id: int
-    symbol: str
-    hour: int
-    minute: int
-    label: Optional[str]
-    is_active: int
-    created_at: datetime
+class VersionComparisonItem(BaseModel):
+    version_id: int
+    version_name: str
+    strategy_name: str
+    total_trades: int
+    win_rate: float
+    profit_factor: float
+    net_pnl: float
+    max_dd: float
+    score: float
 
-    class Config:
-        from_attributes = True
+
+class VersionComparisonResponse(BaseModel):
+    items: List[VersionComparisonItem]
+    best_version_id: int
+    best_version_name: str
+    recommendation: str
