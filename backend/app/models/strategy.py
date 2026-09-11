@@ -5,18 +5,37 @@ import enum
 
 from ..core.database import Base
 
+
+# ═════════════════════════════════════════════
+# Enums
+# ═════════════════════════════════════════════
 class StrategyStatus(str, enum.Enum):
     RESEARCH = "research"
+    BACKTEST = "backtest"
+    OPTIMIZATION = "optimization"
     FORWARD = "forward"
     APPROVED = "approved"
     LIVE = "live"
     DEPRECATED = "deprecated"
+    ARCHIVED = "archived"
+    REJECTED = "rejected"
+
 
 class TradeSource(str, enum.Enum):
     MT4_IMPORT = "mt4_import"
     SOFT4X_IMPORT = "soft4x_import"
     MANUAL = "manual"
 
+
+class TestType(str, enum.Enum):
+    BACKTEST = "backtest"
+    FORWARD = "forward"
+    REAL = "real"
+
+
+# ═════════════════════════════════════════════
+# Models
+# ═════════════════════════════════════════════
 class Strategy(Base):
     __tablename__ = "strategies"
 
@@ -25,7 +44,12 @@ class Strategy(Base):
     description = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    versions = relationship("StrategyVersion", back_populates="strategy", cascade="all, delete-orphan")
+    versions = relationship(
+        "StrategyVersion",
+        back_populates="strategy",
+        cascade="all, delete-orphan"
+    )
+
 
 class StrategyVersion(Base):
     __tablename__ = "strategy_versions"
@@ -38,17 +62,27 @@ class StrategyVersion(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     strategy = relationship("Strategy", back_populates="versions")
-    trades = relationship("Trade", back_populates="version", cascade="all, delete-orphan")
-    analysis_results = relationship("AnalysisResult", back_populates="version", cascade="all, delete-orphan")
+    trades = relationship(
+        "Trade",
+        back_populates="version",
+        cascade="all, delete-orphan"
+    )
+    analysis_results = relationship(
+        "AnalysisResult",
+        back_populates="version",
+        cascade="all, delete-orphan"
+    )
+
 
 class Trade(Base):
     __tablename__ = "trades"
 
     id = Column(Integer, primary_key=True, index=True)
+
     version_id = Column(Integer, ForeignKey("strategy_versions.id"), nullable=True)
     prop_stage_id = Column(Integer, ForeignKey("prop_stages.id"), nullable=True)
     personal_account_id = Column(Integer, ForeignKey("personal_accounts.id"), nullable=True)
-    
+
     symbol = Column(String, nullable=False)
     direction = Column(String, nullable=False)
     open_time = Column(DateTime, nullable=False)
@@ -63,7 +97,9 @@ class Trade(Base):
     commission = Column(Float, default=0.0)
     swap = Column(Float, default=0.0)
     entry_sequence = Column(Integer, default=1)
+
     source = Column(Enum(TradeSource), nullable=False)
+    test_type = Column(Enum(TestType), default=TestType.BACKTEST)
     note = Column(Text, nullable=True)
     screenshot_path = Column(String, nullable=True)
     raw_data = Column(JSON, nullable=True)
@@ -72,7 +108,12 @@ class Trade(Base):
     version = relationship("StrategyVersion", back_populates="trades")
     prop_stage = relationship("PropStage", back_populates="trades")
     personal_account = relationship("PersonalAccount", back_populates="trades")
-    reviews = relationship("JournalReview", back_populates="trade", cascade="all, delete-orphan")
+    reviews = relationship(
+        "JournalReview",
+        back_populates="trade",
+        cascade="all, delete-orphan"
+    )
+
 
 class CustomTimeInterval(Base):
     __tablename__ = "custom_time_intervals"
@@ -90,6 +131,7 @@ class CustomTimeInterval(Base):
     is_active = Column(Integer, default=1)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+
 class TimePoint(Base):
     __tablename__ = "time_points"
 
@@ -101,22 +143,26 @@ class TimePoint(Base):
     is_active = Column(Integer, default=1)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+
 class AnalysisResult(Base):
     __tablename__ = "analysis_results"
 
     id = Column(Integer, primary_key=True, index=True)
     version_id = Column(Integer, ForeignKey("strategy_versions.id"), nullable=False)
+
     total_trades = Column(Integer, default=0)
     win_rate = Column(Float, default=0.0)
     profit_factor = Column(Float, default=0.0)
     net_pnl = Column(Float, default=0.0)
     net_r = Column(Float, default=0.0)
     max_dd = Column(Float, default=0.0)
+
     session_analysis = Column(JSON, nullable=True)
     weekday_analysis = Column(JSON, nullable=True)
     hour_analysis = Column(JSON, nullable=True)
     custom_time_analysis = Column(JSON, nullable=True)
     time_point_analysis = Column(JSON, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
 
     version = relationship("StrategyVersion", back_populates="analysis_results")

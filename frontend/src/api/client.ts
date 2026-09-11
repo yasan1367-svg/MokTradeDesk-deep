@@ -29,3 +29,31 @@ export const compareVersions = (versionIds: number[]) =>
   api.post('/api/analytics/compare', { version_ids: versionIds });
 export const getIntervals = (symbol?: string) =>
   api.get('/api/analytics/intervals/', { params: symbol ? { symbol } : {} });
+
+// ─────────────────────────────────────────────
+// Import
+// ─────────────────────────────────────────────
+export const getAllVersions = () => api.get('/api/strategies/versions/all');
+
+export const importSoft4X = (file: File, versionId?: number, symbol?: string, testType?: string) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (versionId) formData.append('version_id', versionId.toString());
+  if (symbol) formData.append('symbol', symbol);
+  if (testType) formData.append('test_type', testType);
+
+  return api.post('/api/imports/soft4x', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+
+export const importMT4 = (file: File, versionId?: number, testType?: string) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (versionId) formData.append('version_id', versionId.toString());
+  if (testType) formData.append('test_type', testType);
+
+  return api.post('/api/imports/mt4', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};

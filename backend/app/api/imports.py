@@ -11,16 +11,14 @@ from ..models.strategy import StrategyVersion
 router = APIRouter()
 
 
-# ═════════════════════════════════════════════
-# Soft4X Import
-# ═════════════════════════════════════════════
 @router.post("/soft4x")
 async def import_soft4x(
     file: UploadFile = File(...),
     version_id: Optional[int] = Form(None),
+    symbol: Optional[str] = Form("XAUUSD"),
+    test_type: Optional[str] = Form("backtest"),
     db: Session = Depends(get_db)
 ):
-    """واردات فایل اکسل Soft4X"""
     if not file.filename.endswith('.xlsx'):
         raise HTTPException(status_code=400, detail="فایل باید با فرمت xlsx باشد")
 
@@ -30,7 +28,7 @@ async def import_soft4x(
         tmp_path = tmp_file.name
 
     try:
-        importer = Soft4XImporter(db)
+        importer = Soft4XImporter(db, symbol=symbol, test_type=test_type)
         trades = importer.parse_file(tmp_path)
 
         if version_id:
@@ -58,41 +56,32 @@ async def import_soft4x(
             os.unlink(tmp_path)
 
 
-# ═════════════════════════════════════════════
-# MT4 Import (HTML)
-# ═════════════════════════════════════════════
 @router.post("/mt4")
 async def import_mt4(
     file: UploadFile = File(...),
     version_id: Optional[int] = Form(None),
     prop_stage_id: Optional[int] = Form(None),
+    test_type: Optional[str] = Form("backtest"),
     db: Session = Depends(get_db)
 ):
-    """واردات فایل HTML متاتریدر (بخش Positions)"""
     if not file.filename.endswith('.html'):
         raise HTTPException(status_code=400, detail="فایل باید با فرمت html باشد")
 
     content = await file.read()
-    print(f"📁 حجم فایل: {len(content)} بایت")
-    print(f"📁 نام فایل: {file.filename}")
 
-    # تلاش برای decode با encodingهای مختلف
     html_content = None
     for encoding in ['utf-8', 'utf-16', 'windows-1256', 'iso-8859-1', 'cp1252']:
         try:
             html_content = content.decode(encoding)
-            print(f"✅ فایل با encoding {encoding} خوانده شد")
             break
         except (UnicodeDecodeError, LookupError):
             continue
 
     if html_content is None:
-        raise HTTPException(status_code=400, detail="نمی‌توان فایل را خواند (encoding نامشخص)")
-
-    print(f"📄 ۲۰۰ کاراکتر اول: {html_content[:200]}")
+        raise HTTPException(status_code=400, detail="نمی‌توان فایل را خواند")
 
     try:
-        importer = MT4Importer(db)
+        importer = MT4Importer(db, test_type=test_type)
         trades = importer.parse_html(html_content)
 
         if not trades:
@@ -109,7 +98,7 @@ async def import_mt4(
             message = f"{len(saved)} معامله با موفقیت وارد شد (پراپ)"
         else:
             saved = []
-            message = f"{len(trades)} معامله شناسایی شد. برای ذخیره، version_id یا prop_stage_id را وارد کنید."
+            message = f"{len(trades)} معامله شناسایی شد."
 
         return {
             "message": message,

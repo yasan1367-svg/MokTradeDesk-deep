@@ -1,83 +1,87 @@
-from typing import List, Dict, Any, Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
+from typing import List, Dict, Any, Optional
 from bs4 import BeautifulSoup
-from ..models.strategy import Trade, TradeSource
 
-import json
+from ..models.strategy import Trade, TradeSource, TestType
 
-from ..models.strategy import Trade, TradeSource
 
+# ═════════════════════════════════════════════
+# Soft4X Importer
+# ═════════════════════════════════════════════
 class Soft4XImporter:
     """واردکننده فایل‌های اکسل خروجی Soft4X"""
-    
-    def __init__(self, db: Session):
+
+    def __init__(self, db: Session, symbol: str = "XAUUSD", test_type: str = "backtest"):
         self.db = db
-    
+        self.symbol = symbol
+        self.test_type = TestType(test_type)
+
     def parse_file(self, file_path: str) -> List[Dict[str, Any]]:
-        """خواندن فایل اکسل و تبدیل به لیست دیکشنری"""
         from openpyxl import load_workbook
-        
+
         wb = load_workbook(file_path, data_only=True)
-        ws = wb["Trades"]
-        
-        # خواندن هدرها
+        ws = wb["Trades"] if "Trades" in wb.sheetnames else wb.active
+
         headers = []
         for cell in ws[1]:
             headers.append(cell.value)
-        
-        # پیدا کردن ایندکس ستون‌ها
+
         col_index = {}
         for idx, header in enumerate(headers):
             if header:
                 col_index[str(header).strip()] = idx
-        
+
         trades = []
         for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row or not row[0]:
+            if not row or row[0] is None:
                 continue
-            
+
+            if col_index.get("Open Time") is None:
+                continue
+
             open_time = self._to_datetime(self._get_value(row, col_index.get("Open Time")))
             close_time = self._to_datetime(self._get_value(row, col_index.get("Close Time")))
-            
+
+            if open_time is None:
+                continue
+
             trade = {
-                "symbol": "XAUUSD",
+                "symbol": self.symbol,
+                "test_type": self.test_type,
                 "direction": self._get_direction(self._get_value(row, col_index.get("Type"))),
                 "open_time": open_time,
                 "close_time": close_time,
-                "open_price": float(self._get_value(row, col_index.get("Open Price"), 0)),
-                "close_price": float(self._get_value(row, col_index.get("Close Price"), 0)),
-                "size": float(self._get_value(row, col_index.get("Size"), 0)),
+                "open_price": float(self._get_value(row, col_index.get("Open Price"), 0) or 0),
+                "close_price": float(self._get_value(row, col_index.get("Close Price"), 0) or 0),
+                "size": float(self._get_value(row, col_index.get("Size"), 0) or 0),
                 "sl": self._to_float(self._get_value(row, col_index.get("SL"))),
                 "tp": self._to_float(self._get_value(row, col_index.get("TP"))),
-                "pnl": float(self._get_value(row, col_index.get("P/L"), 0)),
+                "pnl": float(self._get_value(row, col_index.get("P/L"), 0) or 0),
                 "r_multiple": None,
                 "commission": self._to_float(self._get_value(row, col_index.get("Commission"))) or 0,
                 "swap": 0.0,
                 "entry_sequence": 1,
                 "source": TradeSource.SOFT4X_IMPORT,
-                "raw_data": self._make_json_safe({headers[i]: row[i] for i in range(len(row)) if i < len(headers)})
+                "raw_data": self._make_json_safe({
+                    headers[i]: row[i] for i in range(len(row)) if i < len(headers)
+                })
             }
             trades.append(trade)
-        
+
         return trades
-    
+
     def save_trades(self, trades: List[Dict[str, Any]], version_id: int) -> List[Trade]:
-        """ذخیره معاملات در دیتابیس"""
         db_trades = []
         for trade_data in trades:
-            db_trade = Trade(
-                version_id=version_id,
-                **trade_data
-            )
+            db_trade = Trade(version_id=version_id, **trade_data)
             self.db.add(db_trade)
             db_trades.append(db_trade)
-        
+
         self.db.commit()
         return db_trades
-    
+
     def _get_value(self, row, index, default=None):
-        """دریافت مقدار از ردیف با مدیریت None"""
         if index is None:
             return default
         try:
@@ -85,30 +89,27 @@ class Soft4XImporter:
             return value if value is not None else default
         except:
             return default
-    
+
     def _get_direction(self, value):
-        """تبدیل جهت معامله"""
         if value:
             return "buy" if str(value).lower() == "buy" else "sell"
         return "sell"
-    
+
     def _to_float(self, value):
-        """تبدیل به float با مدیریت None"""
         if value is None:
             return None
         try:
             return float(value)
         except:
             return None
-    
+
     def _to_datetime(self, value):
-        """تبدیل به datetime پایتون (نه Timestamp)"""
         if value is None:
             return None
         if isinstance(value, datetime):
             return value
         try:
-            if hasattr(value, 'to_pydatetime'):  # اگر pandas Timestamp باشد
+            if hasattr(value, 'to_pydatetime'):
                 return value.to_pydatetime()
             return datetime.strptime(str(value), "%Y-%m-%d %H:%M:%S")
         except:
@@ -116,16 +117,15 @@ class Soft4XImporter:
                 return datetime.fromisoformat(str(value))
             except:
                 return None
-    
+
     def _make_json_safe(self, data: dict) -> dict:
-        """تبدیل مقادیر غیرقابل JSON به فرمت قابل ذخیره"""
         safe_data = {}
         for key, value in data.items():
             if value is None:
                 safe_data[key] = None
             elif isinstance(value, datetime):
                 safe_data[key] = value.isoformat()
-            elif hasattr(value, 'to_pydatetime'):  # pandas Timestamp
+            elif hasattr(value, 'to_pydatetime'):
                 safe_data[key] = value.to_pydatetime().isoformat()
             elif hasattr(value, 'isoformat'):
                 safe_data[key] = value.isoformat()
@@ -135,24 +135,21 @@ class Soft4XImporter:
                 safe_data[key] = str(value)
         return safe_data
 
-    from bs4 import BeautifulSoup
-import re
 
-
+# ═════════════════════════════════════════════
+# MT4 Importer
+# ═════════════════════════════════════════════
 class MT4Importer:
     """واردکننده فایل‌های HTML متاتریدر (فقط بخش Positions)"""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, test_type: str = "backtest"):
         self.db = db
+        self.test_type = TestType(test_type)
 
     def parse_html(self, html_content: str) -> List[Dict[str, Any]]:
-        """استخراج معاملات از بخش Positions"""
         soup = BeautifulSoup(html_content, 'html.parser')
-
         trades = []
         rows = soup.find_all('tr')
-
-        print(f"🔍 تعداد کل ردیف‌ها: {len(rows)}")
 
         in_positions_section = False
         header_skipped = False
@@ -160,54 +157,39 @@ class MT4Importer:
         for idx, row in enumerate(rows):
             row_text = row.get_text(strip=True)
 
-            # تشخیص شروع بخش Positions
             if 'Positions' in row_text and row.find('th'):
                 in_positions_section = True
                 header_skipped = False
-                print(f"✅ بخش Positions پیدا شد در ردیف {idx}")
                 continue
 
-            # تشخیص پایان بخش Positions
             if ('Orders' in row_text or 'Deals' in row_text) and row.find('th'):
                 in_positions_section = False
-                print(f"⏹️ پایان بخش Positions در ردیف {idx}")
                 continue
 
             if not in_positions_section:
                 continue
 
-            # رد کردن ردیف هدر
             if not header_skipped:
                 header_skipped = True
-                print(f"⏭️ ردیف هدر رد شد در ردیف {idx}")
                 continue
 
-            # استخراج ستون‌های قابل مشاهده (بدون class="hidden")
             all_cells = row.find_all('td')
             visible_cells = [
                 c for c in all_cells
                 if 'hidden' not in (c.get('class') or [])
             ]
 
-            print(f"📊 ردیف {idx}: {len(all_cells)} ستون کل، {len(visible_cells)} ستون قابل مشاهده")
-
-            # پردازش ردیف‌های معاملات (حداقل ۱۳ ستون قابل مشاهده)
             if len(visible_cells) >= 13:
                 try:
                     trade = self._parse_row(visible_cells)
                     if trade:
                         trades.append(trade)
-                        print(f"  ✅ معامله اضافه شد: {trade['symbol']} | {trade['direction']} | {trade['pnl']}")
-                    else:
-                        print(f"  ⚠️ _parse_row مقدار None برگرداند")
                 except Exception as e:
-                    print(f"  ❌ خطا در پردازش ردیف: {e}")
+                    print(f"  ❌ خطا: {e}")
 
-        print(f"🎯 مجموع معاملات استخراج‌شده: {len(trades)}")
         return trades
 
     def _parse_row(self, cells) -> Optional[Dict[str, Any]]:
-        """تبدیل یک ردیف جدول به دیکشنری معامله (فقط ستون‌های قابل مشاهده)"""
         try:
             open_time = self._to_datetime(cells[0].get_text(strip=True))
             position = cells[1].get_text(strip=True)
@@ -224,13 +206,13 @@ class MT4Importer:
             profit = self._to_float(cells[12].get_text(strip=True)) or 0
 
             if open_time is None:
-                print(f"  ⚠️ open_time None است برای: {cells[0].get_text(strip=True)}")
                 return None
 
             direction = "buy" if "buy" in direction_raw else "sell"
 
             return {
                 "symbol": symbol,
+                "test_type": self.test_type,
                 "direction": direction,
                 "open_time": open_time,
                 "close_time": close_time,
@@ -260,7 +242,6 @@ class MT4Importer:
         version_id: Optional[int] = None,
         prop_stage_id: Optional[int] = None,
     ) -> List[Trade]:
-        """ذخیره معاملات در دیتابیس"""
         db_trades = []
         for trade_data in trades:
             db_trade = Trade(
