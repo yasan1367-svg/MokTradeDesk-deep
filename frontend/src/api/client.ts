@@ -154,3 +154,26 @@ export const updateStageRules = (
     profit_share_percentage?: number;
   }
 ) => api.patch(`/api/prop/stages/${stageId}/rules`, data);
+
+// ─────────────────────────────────────────────
+// Strategy Management
+// ─────────────────────────────────────────────
+export const getStrategyDetail = (strategyId: number) =>
+  api.get(`/api/strategies/${strategyId}`);
+
+export const updateStrategy = (strategyId: number, data: { name?: string; description?: string }) =>
+  api.patch(`/api/strategies/${strategyId}`, data);
+
+export const deleteStrategy = (strategyId: number) =>
+  api.delete(`/api/strategies/${strategyId}`);
+
+export const getStrategyVersions = (strategyId: number) =>
+  api.get(`/api/strategies/${strategyId}/versions`);
+
+export const updateVersion = (
+  versionId: number,
+  data: { version_name?: string; rules_note?: string; status?: string }
+) => api.patch(`/api/strategies/versions/${versionId}`, data);
+
+export const deleteVersion = (versionId: number) =>
+  api.delete(`/api/strategies/versions/${versionId}`);
