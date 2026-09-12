@@ -23,45 +23,63 @@ export default function AnalysisPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // بارگذاری لیست نسخه‌ها
+  // ═════════════════════════════════════════════
+  // ۱. بارگذاری لیست نسخه‌ها (بدون شرط)
+  // ═════════════════════════════════════════════
   useEffect(() => {
-  if (!selectedVersion) return;
+    getAllVersions()
+      .then((res) => {
+        setVersions(res.data);
+        if (res.data.length > 0) {
+          setSelectedVersion(res.data[0].id);
+        }
+      })
+      .catch((err) => console.error('خطا در دریافت نسخه‌ها:', err));
+  }, []);
 
-  setLoading(true);
-  setError(null);
+  // ═════════════════════════════════════════════
+  // ۲. بارگذاری تحلیل و معاملات (با شرط selectedVersion)
+  // ═════════════════════════════════════════════
+  useEffect(() => {
+    if (!selectedVersion) return;
 
-  const loadData = async () => {
-    try {
-      let analysisData: any = null;
-      let tradesData: any[] = [];
+    setLoading(true);
+    setError(null);
 
+    const loadData = async () => {
       try {
-        const analysisRes = await getVersionAnalysis(selectedVersion);
-        analysisData = analysisRes.data;
-      } catch (e) {
-        console.log('تحلیلی یافت نشد');
+        let analysisData: any = null;
+        let tradesData: any[] = [];
+
+        try {
+          const analysisRes = await getVersionAnalysis(selectedVersion);
+          analysisData = analysisRes.data;
+        } catch (e) {
+          console.log('تحلیلی یافت نشد');
+        }
+
+        try {
+          const tradesRes = await getVersionTrades(selectedVersion);
+          tradesData = tradesRes.data;
+        } catch (e) {
+          console.log('معامله‌ای یافت نشد');
+        }
+
+        setAnalysis(analysisData);
+        setTrades(tradesData);
+      } catch (err) {
+        setError('خطا در بارگذاری داده‌ها');
+      } finally {
+        setLoading(false);
       }
+    };
 
-      try {
-        const tradesRes = await getVersionTrades(selectedVersion);
-        tradesData = tradesRes.data;
-      } catch (e) {
-        console.log('معامله‌ای یافت نشد');
-      }
+    loadData();
+  }, [selectedVersion]);
 
-      setAnalysis(analysisData);
-      setTrades(tradesData);
-    } catch (err) {
-      setError('خطا در بارگذاری داده‌ها');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  loadData();
-}, [selectedVersion]);
-
+  // ═════════════════════════════════════════════
   // اجرای مجدد تحلیل
+  // ═════════════════════════════════════════════
   const handleReanalyze = async () => {
     if (!selectedVersion) return;
 
@@ -90,11 +108,15 @@ export default function AnalysisPage() {
               onChange={(e) => setSelectedVersion(Number(e.target.value))}
               className="w-full bg-card border border-card-border rounded-xl px-4 py-3 text-text-primary focus:border-accent focus:outline-none"
             >
-              {versions.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.strategy_name} / {v.version_name}
-                </option>
-              ))}
+              {versions.length === 0 ? (
+                <option value="">— نسخه‌ای وجود ندارد —</option>
+              ) : (
+                versions.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.strategy_name} / {v.version_name}
+                  </option>
+                ))
+              )}
             </select>
           </div>
 

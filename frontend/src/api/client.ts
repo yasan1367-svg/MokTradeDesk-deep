@@ -177,3 +177,61 @@ export const updateVersion = (
 
 export const deleteVersion = (versionId: number) =>
   api.delete(`/api/strategies/versions/${versionId}`);
+
+
+// ─────────────────────────────────────────────
+// Trades Management
+// ─────────────────────────────────────────────
+export const getTrades = (params?: {
+  version_id?: number;
+  prop_stage_id?: number;
+  symbol?: string;
+  test_type?: string;
+  source?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}) => api.get('/api/trades/', { params });
+
+export const getTrade = (tradeId: number) =>
+  api.get(`/api/trades/${tradeId}`);
+
+export const updateTrade = (tradeId: number, data: { note?: string }) =>
+  api.patch(`/api/trades/${tradeId}`, data);
+
+export const deleteTrade = (tradeId: number) =>
+  api.delete(`/api/trades/${tradeId}`);
+
+export const createManualTrade = (data: {
+  symbol: string;
+  direction: string;
+  open_time: string;
+  close_time?: string;
+  open_price: number;
+  close_price?: number;
+  size: number;
+  sl?: number;
+  tp?: number;
+  pnl?: number;
+  commission?: number;
+  swap?: number;
+  version_id?: number;
+  prop_stage_id?: number;
+  test_type?: string;
+  note?: string;
+}) => api.post('/api/trades/manual', data);
+
+export const uploadTradeScreenshot = (tradeId: number, file: File, description?: string) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (description) formData.append('description', description);
+  return api.post(`/api/trades/${tradeId}/screenshots`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+
+export const getTradeScreenshots = (tradeId: number) =>
+  api.get(`/api/trades/${tradeId}/screenshots`);
+
+export const deleteScreenshot = (screenshotId: number) =>
+  api.delete(`/api/trades/screenshots/${screenshotId}`);

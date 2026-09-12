@@ -6,8 +6,9 @@ import AnalysisPage from './pages/AnalysisPage';
 import PropPage from './pages/PropPage';
 import { compareVersions } from './api/client';
 import StrategyPage from './pages/StrategyPage';
+import TradesPage from './pages/TradesPage';
 
-type Page = 'dashboard' | 'analysis' | 'strategy' | 'prop' | 'import';
+type Page = 'dashboard' | 'analysis' | 'comparison' | 'strategy' | 'trades' | 'prop' | 'import';
 
 function App() {
   const [page, setPage] = useState<Page>('dashboard');
@@ -39,7 +40,9 @@ function App() {
           {[
             { key: 'dashboard', label: '📊 داشبورد' },
             { key: 'analysis', label: '📈 تحلیل' },
+            { key: 'comparison', label: '⚖️ مقایسه' },
             { key: 'strategy', label: '🎯 استراتژی' },
+            { key: 'trades', label: '📋 معاملات' },
             { key: 'prop', label: '🏢 پراپ' },
             { key: 'import', label: '📥 واردات' },
           ].map((item) => (
@@ -131,6 +134,7 @@ function App() {
       {page === 'prop' && <PropPage />}
       {page === 'import' && <ImportPage />}
       {page === 'strategy' && <StrategyPage />}
+      {page === 'trades' && <TradesPage />}
     </div>
   );
 }
