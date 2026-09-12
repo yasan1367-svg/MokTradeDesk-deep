@@ -58,7 +58,7 @@ class AnalysisService:
     # مقایسه‌ی چند نسخه
     # ═════════════════════════════════════════════
     def compare_versions(self, version_ids: List[int]) -> Dict[str, Any]:
-        """مقایسه‌ی چند نسخه و پیشنهاد بهترین"""
+        """مقایسه‌ی چند نسخه با پیشنهاد هوشمند و دلایل"""
         items = []
         for vid in version_ids:
             version = self.db.query(StrategyVersion).filter(
@@ -77,6 +77,9 @@ class AnalysisService:
                 Strategy.id == version.strategy_id
             ).first()
 
+            trades = self.db.query(Trade).filter(Trade.version_id == vid).all()
+            symbols = list(set(t.symbol for t in trades if t.symbol))
+
             score = self._calculate_score(analysis)
 
             items.append({
@@ -89,6 +92,11 @@ class AnalysisService:
                 "net_pnl": analysis.net_pnl,
                 "max_dd": analysis.max_dd,
                 "score": round(score, 2),
+                "symbols": symbols,
+                "session_analysis": analysis.session_analysis or {},
+                "weekday_analysis": analysis.weekday_analysis or {},
+                "hour_analysis": analysis.hour_analysis or {},
+                "custom_time_analysis": analysis.custom_time_analysis or {},
             })
 
         if not items:
@@ -97,8 +105,11 @@ class AnalysisService:
         items.sort(key=lambda x: x["score"], reverse=True)
         best = items[0]
 
+        reasons = self._build_reasons(best, items)
+        symbol_bests = self._find_symbol_bests(items)
+        detail_bests = self._find_detail_bests(items)
+
         recommendation = (
-            f"بر اساس ترکیب نرخ برد، فاکتور سود و حداقل افت سرمایه، "
             f"نسخه‌ی «{best['version_name']}» از استراتژی «{best['strategy_name']}» "
             f"با امتیاز {best['score']} بهترین عملکرد را داشته است."
         )
@@ -107,8 +118,207 @@ class AnalysisService:
             "items": items,
             "best_version_id": best["version_id"],
             "best_version_name": best["version_name"],
+            "best_score": best["score"],
             "recommendation": recommendation,
+            "reasons": reasons,
+            "symbol_bests": symbol_bests,
+            "detail_bests": detail_bests,
         }
+
+    def _build_reasons(self, best: Dict, items: List[Dict]) -> List[Dict[str, str]]:
+        """ساخت دلایل برتری بهترین نسخه"""
+        reasons = []
+        best_data = best
+
+        highest_wr = max(items, key=lambda x: x["win_rate"])
+        if highest_wr["version_id"] == best_data["version_id"]:
+            second_wr = sorted(items, key=lambda x: x["win_rate"], reverse=True)[1] if len(items) > 1 else None
+            reasons.append({
+                "icon": "✅",
+                "text": f"بالاترین نرخ برد ({best_data['win_rate']}٪" +
+                        (f" در مقابل {second_wr['win_rate']}٪" if second_wr else "") + ")",
+            })
+
+        highest_pnl = max(items, key=lambda x: x["net_pnl"])
+        if highest_pnl["version_id"] == best_data["version_id"]:
+            second_pnl = sorted(items, key=lambda x: x["net_pnl"], reverse=True)[1] if len(items) > 1 else None
+            reasons.append({
+                "icon": "💰",
+                "text": f"بالاترین سود خالص (+{best_data['net_pnl']}$" +
+                        (f" در مقابل +{second_pnl['net_pnl']}$" if second_pnl else "") + ")",
+            })
+
+        lowest_dd = min(items, key=lambda x: x["max_dd"])
+        if lowest_dd["version_id"] == best_data["version_id"]:
+            second_dd = sorted(items, key=lambda x: x["max_dd"])[1] if len(items) > 1 else None
+            reasons.append({
+                "icon": "🛡️",
+                "text": f"کمترین حداکثر افت سرمایه (-{best_data['max_dd']}$" +
+                        (f" در مقابل -{second_dd['max_dd']}$" if second_dd else "") + ")",
+            })
+
+        highest_pf = max(items, key=lambda x: x["profit_factor"])
+        if highest_pf["version_id"] == best_data["version_id"]:
+            second_pf = sorted(items, key=lambda x: x["profit_factor"], reverse=True)[1] if len(items) > 1 else None
+            reasons.append({
+                "icon": "🏆",
+                "text": f"بهترین فاکتور سود ({best_data['profit_factor']}" +
+                        (f" در مقابل {second_pf['profit_factor']}" if second_pf else "") + ")",
+            })
+
+        if not reasons:
+            reasons.append({
+                "icon": "📊",
+                "text": f"بهترین ترکیب کلی متریک‌ها با امتیاز {best_data['score']}",
+            })
+
+        return reasons
+
+    def _find_symbol_bests(self, items: List[Dict]) -> List[Dict[str, Any]]:
+        """پیدا کردن بهترین نسخه برای هر نماد"""
+        symbols_data: Dict[str, List[Dict]] = {}
+
+        for item in items:
+            for symbol in item.get("symbols", []):
+                if symbol not in symbols_data:
+                    symbols_data[symbol] = []
+                symbols_data[symbol].append(item)
+
+        result = []
+        for symbol, versions in symbols_data.items():
+            versions_sorted = sorted(versions, key=lambda x: x["score"], reverse=True)
+            best = versions_sorted[0]
+
+            symbol_label = {
+                "XAUUSD": "🥇 طلا (XAUUSD)",
+                "DJIUSD": "📊 داوجونز (DJIUSD)",
+                "DJIUSD.x": "📊 داوجونز (DJIUSD)",
+            }.get(symbol, f"📈 {symbol}")
+
+            result.append({
+                "symbol": symbol,
+                "symbol_label": symbol_label,
+                "best_version_id": best["version_id"],
+                "best_version_name": best["version_name"],
+                "best_strategy": best["strategy_name"],
+                "win_rate": best["win_rate"],
+                "net_pnl": best["net_pnl"],
+                "score": best["score"],
+            })
+
+        return result
+
+    def _find_detail_bests(self, items: List[Dict]) -> Dict[str, Any]:
+        """پیدا کردن بهترین نسخه در هر بخش تفکیکی"""
+        result = {
+            "session": [],
+            "weekday": [],
+            "hour": [],
+            "custom_interval": [],
+        }
+
+        # سشن‌ها
+        sessions = ["Asia", "Europe", "America"]
+        for session in sessions:
+            best_version = None
+            best_wr = -1
+            for item in items:
+                session_data = item.get("session_analysis", {}).get(session, {})
+                if session_data and session_data.get("win_rate", 0) > best_wr:
+                    best_wr = session_data["win_rate"]
+                    best_version = {
+                        "version_name": item["version_name"],
+                        "win_rate": session_data.get("win_rate", 0),
+                        "net_pnl": session_data.get("net_pnl", 0),
+                        "total_trades": session_data.get("total_trades", 0),
+                    }
+            if best_version:
+                session_label = {
+                    "Asia": "🌏 آسیا",
+                    "Europe": "🌍 اروپا",
+                    "America": "🌎 آمریکا",
+                }.get(session, session)
+                result["session"].append({
+                    "name": session_label,
+                    "best": best_version,
+                })
+
+        # روزهای هفته
+        weekdays = ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+        weekday_labels = {
+            "Saturday": "شنبه",
+            "Sunday": "یک‌شنبه",
+            "Monday": "دوشنبه",
+            "Tuesday": "سه‌شنبه",
+            "Wednesday": "چهارشنبه",
+            "Thursday": "پنج‌شنبه",
+            "Friday": "جمعه",
+        }
+        for day in weekdays:
+            best_version = None
+            best_wr = -1
+            for item in items:
+                day_data = item.get("weekday_analysis", {}).get(day, {})
+                if day_data and day_data.get("win_rate", 0) > best_wr:
+                    best_wr = day_data["win_rate"]
+                    best_version = {
+                        "version_name": item["version_name"],
+                        "win_rate": day_data.get("win_rate", 0),
+                        "net_pnl": day_data.get("net_pnl", 0),
+                        "total_trades": day_data.get("total_trades", 0),
+                    }
+            if best_version:
+                result["weekday"].append({
+                    "name": weekday_labels.get(day, day),
+                    "best": best_version,
+                })
+
+        # ساعت‌ها
+        for hour in range(24):
+            hour_str = str(hour)
+            best_version = None
+            best_wr = -1
+            for item in items:
+                hour_data = item.get("hour_analysis", {}).get(hour_str, {})
+                if hour_data and hour_data.get("win_rate", 0) > best_wr:
+                    best_wr = hour_data["win_rate"]
+                    best_version = {
+                        "version_name": item["version_name"],
+                        "win_rate": hour_data.get("win_rate", 0),
+                        "net_pnl": hour_data.get("net_pnl", 0),
+                    }
+            if best_version:
+                result["hour"].append({
+                    "name": f"ساعت {hour}",
+                    "best": best_version,
+                })
+
+        # بازه‌های سفارشی
+        all_intervals = set()
+        for item in items:
+            for key in item.get("custom_time_analysis", {}).keys():
+                all_intervals.add(key)
+
+        for interval in all_intervals:
+            best_version = None
+            best_wr = -1
+            for item in items:
+                interval_data = item.get("custom_time_analysis", {}).get(interval, {})
+                if interval_data and interval_data.get("win_rate", 0) > best_wr:
+                    best_wr = interval_data["win_rate"]
+                    best_version = {
+                        "version_name": item["version_name"],
+                        "win_rate": interval_data.get("win_rate", 0),
+                        "net_pnl": interval_data.get("net_pnl", 0),
+                        "total_trades": interval_data.get("total_trades", 0),
+                    }
+            if best_version:
+                result["custom_interval"].append({
+                    "name": interval,
+                    "best": best_version,
+                })
+
+        return result
 
     def _calculate_score(self, analysis: AnalysisResult) -> float:
         """محاسبه‌ی امتیاز ترکیبی برای رتبه‌بندی"""
@@ -142,7 +352,6 @@ class AnalysisService:
         initial = stage.initial_balance or 10000
         profit_percent = (total_pnl / initial * 100) if initial > 0 else 0
 
-        # محاسبه‌ی DD روزانه (بیشترین ضرر در یک روز)
         daily_pnl: Dict[str, float] = {}
         for t in trades:
             if not t.close_time:
@@ -153,7 +362,6 @@ class AnalysisService:
         max_daily_loss = min(daily_pnl.values()) if daily_pnl else 0
         max_daily_dd_percent = abs(max_daily_loss / initial * 100) if initial > 0 else 0
 
-        # محاسبه‌ی DD کلی (max drawdown)
         sorted_trades = sorted(trades, key=lambda t: t.close_time or t.open_time)
         equity = initial
         peak = initial
@@ -167,22 +375,17 @@ class AnalysisService:
                 max_dd = dd
         max_dd_percent = (max_dd / initial * 100) if initial > 0 else 0
 
-        # تعداد روزهای معاملاتی
         trading_days = len(daily_pnl)
-
-        # قوانین
         profit_target = stage.profit_target or 0
         max_daily_dd_limit = stage.max_daily_dd or 0
         max_total_dd_limit = stage.max_total_dd or 0
         min_days = stage.min_trading_days or 0
 
-        # بررسی وضعیت
         daily_dd_violated = max_daily_dd_percent > max_daily_dd_limit if max_daily_dd_limit > 0 else False
         total_dd_violated = max_dd_percent > max_total_dd_limit if max_total_dd_limit > 0 else False
         target_reached = profit_percent >= profit_target if profit_target > 0 else False
         min_days_met = trading_days >= min_days if min_days > 0 else True
 
-        # وضعیت پیشنهادی
         if daily_dd_violated:
             suggested_status = "failed_daily_dd"
         elif total_dd_violated:
@@ -196,35 +399,23 @@ class AnalysisService:
             "stage_id": stage_id,
             "stage_type": stage.stage_type.value if stage.stage_type else None,
             "status": stage.status.value if stage.status else None,
-
-            # سود
             "current_profit": round(total_pnl, 2),
             "current_profit_percent": round(profit_percent, 2),
             "profit_target_percent": profit_target,
             "profit_progress_percent": round((profit_percent / profit_target * 100) if profit_target > 0 else 0, 2),
-
-            # DD روزانه
             "max_daily_dd_percent": round(max_daily_dd_percent, 2),
             "max_daily_dd_limit": max_daily_dd_limit,
             "daily_dd_progress_percent": round((max_daily_dd_percent / max_daily_dd_limit * 100) if max_daily_dd_limit > 0 else 0, 2),
-
-            # DD کلی
             "max_total_dd_percent": round(max_dd_percent, 2),
             "max_total_dd_limit": max_total_dd_limit,
             "total_dd_progress_percent": round((max_dd_percent / max_total_dd_limit * 100) if max_total_dd_limit > 0 else 0, 2),
-
-            # روزها
             "trading_days": trading_days,
             "min_trading_days": min_days,
             "days_met": min_days_met,
-
-            # وضعیت
             "daily_dd_violated": daily_dd_violated,
             "total_dd_violated": total_dd_violated,
             "target_reached": target_reached,
             "suggested_status": suggested_status,
-
-            # تعداد معاملات
             "total_trades": len(trades),
         }
 
@@ -258,7 +449,6 @@ class AnalysisService:
         }
 
     def _calculate_max_drawdown(self, trades: List[Trade]) -> float:
-        """محاسبه‌ی حداکثر افت سرمایه"""
         sorted_trades = sorted(trades, key=lambda t: t.close_time or t.open_time)
         equity = 0
         peak = 0
@@ -274,11 +464,7 @@ class AnalysisService:
 
         return max_dd
 
-    # ═════════════════════════════════════════════
-    # تحلیل‌های تفکیکی
-    # ═════════════════════════════════════════════
     def _analyze_by_session(self, trades: List[Trade]) -> Dict[str, Any]:
-        """تحلیل بر اساس سشن (آسیا، اروپا، آمریکا)"""
         sessions = {"Asia": [], "Europe": [], "America": [], "Other": []}
 
         for t in trades:
@@ -297,7 +483,6 @@ class AnalysisService:
         return {name: self._summarize(trades) for name, trades in sessions.items() if trades}
 
     def _analyze_by_weekday(self, trades: List[Trade]) -> Dict[str, Any]:
-        """تحلیل بر اساس روز هفته"""
         weekdays = {
             0: "Monday", 1: "Tuesday", 2: "Wednesday",
             3: "Thursday", 4: "Friday", 5: "Saturday", 6: "Sunday"
@@ -313,7 +498,6 @@ class AnalysisService:
         return {name: self._summarize(trades) for name, trades in by_day.items() if trades}
 
     def _analyze_by_hour(self, trades: List[Trade]) -> Dict[str, Any]:
-        """تحلیل بر اساس ساعت (۰ تا ۲۳)"""
         by_hour = {str(h): [] for h in range(24)}
 
         for t in trades:
@@ -325,7 +509,6 @@ class AnalysisService:
         return {h: self._summarize(trades) for h, trades in by_hour.items() if trades}
 
     def _analyze_by_custom_intervals(self, trades: List[Trade]) -> Dict[str, Any]:
-        """تحلیل بر اساس بازه‌های سفارشی (با فیلتر symbol)"""
         intervals = self.db.query(CustomTimeInterval).filter(
             CustomTimeInterval.is_active == 1
         ).all()
@@ -351,11 +534,7 @@ class AnalysisService:
 
         return result
 
-    # ═════════════════════════════════════════════
-    # خلاصه‌سازی
-    # ═════════════════════════════════════════════
     def _summarize(self, trades: List[Trade]) -> Dict[str, Any]:
-        """خلاصه‌ی متریک‌های یک گروه از معاملات"""
         total = len(trades)
         wins = [t for t in trades if t.pnl and t.pnl > 0]
         losses = [t for t in trades if t.pnl and t.pnl < 0]

@@ -7,6 +7,7 @@ import PropPage from './pages/PropPage';
 import { compareVersions } from './api/client';
 import StrategyPage from './pages/StrategyPage';
 import TradesPage from './pages/TradesPage';
+import ComparisonPage from './pages/ComparisonPage';
 
 type Page = 'dashboard' | 'analysis' | 'comparison' | 'strategy' | 'trades' | 'prop' | 'import';
 
@@ -135,6 +136,7 @@ function App() {
       {page === 'import' && <ImportPage />}
       {page === 'strategy' && <StrategyPage />}
       {page === 'trades' && <TradesPage />}
+      {page === 'comparison' && <ComparisonPage />}
     </div>
   );
 }

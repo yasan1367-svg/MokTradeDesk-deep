@@ -29,6 +29,8 @@ export const compareVersions = (versionIds: number[]) =>
   api.post('/api/analytics/compare', { version_ids: versionIds });
 export const getIntervals = (symbol?: string) =>
   api.get('/api/analytics/intervals/', { params: symbol ? { symbol } : {} });
+export const compareVersionsWithDetails = (versionIds: number[]) =>
+  api.post('/api/analytics/compare', { version_ids: versionIds });
 
 // ─────────────────────────────────────────────
 // Import
