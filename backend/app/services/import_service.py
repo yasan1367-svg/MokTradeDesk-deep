@@ -71,10 +71,20 @@ class Soft4XImporter:
 
         return trades
 
-    def save_trades(self, trades: List[Dict[str, Any]], version_id: int) -> List[Trade]:
+    def save_trades(
+        self,
+        trades: List[Dict[str, Any]],
+        version_id: Optional[int] = None,
+        prop_stage_id: Optional[int] = None,
+    ) -> List[Trade]:
+        """ذخیره معاملات در دیتابیس (می‌تواند به نسخه یا مرحله پراپ متصل باشد)"""
         db_trades = []
         for trade_data in trades:
-            db_trade = Trade(version_id=version_id, **trade_data)
+            db_trade = Trade(
+                version_id=version_id,
+                prop_stage_id=prop_stage_id,
+                **trade_data
+            )
             self.db.add(db_trade)
             db_trades.append(db_trade)
 
@@ -242,6 +252,7 @@ class MT4Importer:
         version_id: Optional[int] = None,
         prop_stage_id: Optional[int] = None,
     ) -> List[Trade]:
+        """ذخیره معاملات در دیتابیس (می‌تواند به نسخه یا مرحله پراپ متصل باشد)"""
         db_trades = []
         for trade_data in trades:
             db_trade = Trade(

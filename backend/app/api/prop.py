@@ -28,7 +28,6 @@ class PropAccountCreate(BaseModel):
     account_label: str
     account_number: Optional[str] = None
     currency: str = "USD"
-    # مقادیر دلاری
     initial_balance: Optional[float] = 10000.0
     profit_target: Optional[float] = 800.0
     max_daily_dd: Optional[float] = 500.0
@@ -36,9 +35,7 @@ class PropAccountCreate(BaseModel):
     min_trading_days: Optional[int] = 5
 
 
-class PropStageCreate(BaseModel):
-    prop_account_id: int
-    stage_type: str
+class StageRules(BaseModel):
     profit_target: Optional[float] = None
     max_daily_dd: Optional[float] = None
     max_total_dd: Optional[float] = None
@@ -47,8 +44,18 @@ class PropStageCreate(BaseModel):
     profit_share_percentage: Optional[float] = None
 
 
-class PassStageRequest(BaseModel):
+class StageRulesUpdate(BaseModel):
+    profit_target: Optional[float] = None
+    max_daily_dd: Optional[float] = None
+    max_total_dd: Optional[float] = None
+    min_trading_days: Optional[int] = None
+    initial_balance: Optional[float] = None
+    profit_share_percentage: Optional[float] = None
+
+
+class PassStageWithRulesRequest(BaseModel):
     final_balance: Optional[float] = None
+    next_stage_rules: Optional[StageRules] = None
 
 
 class FailStageRequest(BaseModel):
@@ -75,17 +82,19 @@ class PropCostCreate(BaseModel):
 @router.get("/firms")
 def get_firms(db: Session = Depends(get_db)):
     firms = db.query(PropFirm).all()
-    return [
-        {
+    result = []
+    for f in firms:
+        accounts = db.query(PropAccount).filter(PropAccount.prop_firm_id == f.id).all()
+        result.append({
             "id": f.id,
             "name": f.name,
             "default_profit_share": f.default_profit_share,
             "website": f.website,
             "notes": f.notes,
             "created_at": f.created_at,
-        }
-        for f in firms
-    ]
+            "accounts_count": len(accounts),
+        })
+    return result
 
 
 @router.post("/firms")
@@ -113,6 +122,7 @@ def get_accounts(db: Session = Depends(get_db)):
             "account_number": a.account_number,
             "currency": a.currency,
             "is_active": a.is_active,
+            "firm_id": a.prop_firm_id,
             "firm_name": firm.name if firm else "نامشخص",
             "stages_count": len(stages),
             "created_at": a.created_at,
@@ -126,7 +136,6 @@ def create_account(account: PropAccountCreate, db: Session = Depends(get_db)):
     if not firm:
         raise HTTPException(status_code=404, detail="شرکت پراپ پیدا نشد")
 
-    # ایجاد اکانت
     db_account = PropAccount(
         prop_firm_id=account.prop_firm_id,
         account_label=account.account_label,
@@ -137,7 +146,7 @@ def create_account(account: PropAccountCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_account)
 
-    # ایجاد خودکار Stage 1 با قوانین دلاری
+    # ایجاد خودکار Stage 1
     stage1 = PropStage(
         prop_account_id=db_account.id,
         stage_type=StageType.STAGE_1,
@@ -154,27 +163,6 @@ def create_account(account: PropAccountCreate, db: Session = Depends(get_db)):
 
     return {"id": db_account.id, "message": "اکانت و مرحله ۱ ایجاد شد"}
 
-@router.get("/stages/{stage_id}/trades")
-def get_stage_trades(stage_id: int, db: Session = Depends(get_db)):
-    """دریافت معاملات یک مرحله"""
-    from ..models.strategy import Trade
-    trades = db.query(Trade).filter(Trade.prop_stage_id == stage_id).all()
-    return [
-        {
-            "id": t.id,
-            "symbol": t.symbol,
-            "direction": t.direction,
-            "open_time": t.open_time,
-            "close_time": t.close_time,
-            "open_price": t.open_price,
-            "close_price": t.close_price,
-            "size": t.size,
-            "pnl": t.pnl,
-            "commission": t.commission,
-            "swap": t.swap,
-        }
-        for t in trades
-    ]
 
 @router.get("/accounts/{account_id}")
 def get_account_detail(account_id: int, db: Session = Depends(get_db)):
@@ -201,6 +189,7 @@ def get_account_detail(account_id: int, db: Session = Depends(get_db)):
                 "profit_target": s.profit_target,
                 "max_daily_dd": s.max_daily_dd,
                 "max_total_dd": s.max_total_dd,
+                "min_trading_days": s.min_trading_days,
                 "initial_balance": s.initial_balance,
                 "final_balance": s.final_balance,
                 "current_profit": s.current_profit,
@@ -217,45 +206,101 @@ def get_account_detail(account_id: int, db: Session = Depends(get_db)):
 # ═════════════════════════════════════════════
 # Prop Stage
 # ═════════════════════════════════════════════
+@router.get("/stages/all")
+def get_all_stages(db: Session = Depends(get_db)):
+    """دریافت لیست همه‌ی مراحل پراپ (برای انتخاب در Import)"""
+    stages = db.query(PropStage).all()
+    result = []
+    for s in stages:
+        account = db.query(PropAccount).filter(PropAccount.id == s.prop_account_id).first()
+        firm = db.query(PropFirm).filter(PropFirm.id == account.prop_firm_id).first() if account else None
+
+        stage_label = {
+            'stage_1': 'مرحله ۱',
+            'stage_2': 'مرحله ۲',
+            'funded_real': 'رییل'
+        }.get(s.stage_type.value if s.stage_type else '', s.stage_type.value if s.stage_type else '')
+
+        status_label = {
+            'active': 'فعال',
+            'passed': 'پاس‌شده',
+            'failed': 'فیل‌شده',
+            'closed': 'بسته‌شده'
+        }.get(s.status.value if s.status else '', '')
+
+        result.append({
+            "id": s.id,
+            "stage_type": s.stage_type.value if s.stage_type else None,
+            "stage_label": stage_label,
+            "status": s.status.value if s.status else None,
+            "status_label": status_label,
+            "account_label": account.account_label if account else "نامشخص",
+            "firm_name": firm.name if firm else "نامشخص",
+            "display_name": f"{firm.name if firm else '?'} / {account.account_label if account else '?'} / {stage_label} ({status_label})",
+        })
+    return result
+
+
+@router.get("/stages/{stage_id}/check-pass")
+def check_pass_ready(stage_id: int, db: Session = Depends(get_db)):
+    """بررسی وضعیت مرحله قبل از پاس کردن"""
+    from ..services.analysis_service import AnalysisService
+    service = AnalysisService(db)
+    return service.calculate_stage_progress(stage_id)
+
+
 @router.post("/stages/{stage_id}/pass")
-def pass_stage(stage_id: int, request: PassStageRequest, db: Session = Depends(get_db)):
+def pass_stage(stage_id: int, request: PassStageWithRulesRequest, db: Session = Depends(get_db)):
+    """پاس کردن مرحله با قوانین مرحله‌ی بعدی"""
     stage = db.query(PropStage).filter(PropStage.id == stage_id).first()
     if not stage:
         raise HTTPException(status_code=404, detail="مرحله پیدا نشد")
 
+    if stage.stage_type == StageType.FUNDED_REAL:
+        raise HTTPException(status_code=400, detail="مرحله رییل قابل پاس شدن نیست")
+
+    # محاسبه‌ی موجودی نهایی از معاملات
+    from ..models.strategy import Trade
+    trades = db.query(Trade).filter(Trade.prop_stage_id == stage_id).all()
+    total_pnl = sum(t.pnl or 0 for t in trades)
+    final_balance = (stage.initial_balance or 0) + total_pnl
+
+    # به‌روزرسانی مرحله‌ی فعلی
     stage.status = StageStatus.PASSED
     stage.end_date = datetime.utcnow()
-    if request.final_balance:
-        stage.final_balance = request.final_balance
+    stage.final_balance = final_balance
     db.commit()
 
-    # ایجاد خودکار مرحله‌ی بعدی
+    # تعیین نوع مرحله‌ی بعدی
+    next_stage_type = None
     if stage.stage_type == StageType.STAGE_1:
-        next_stage = PropStage(
-            prop_account_id=stage.prop_account_id,
-            stage_type=StageType.STAGE_2,
-            status=StageStatus.ACTIVE,
-            start_date=datetime.utcnow(),
-            initial_balance=stage.final_balance or stage.initial_balance,
-        )
-        db.add(next_stage)
-        db.commit()
-        return {"message": "مرحله ۱ پاس شد. مرحله ۲ ایجاد شد."}
-
+        next_stage_type = StageType.STAGE_2
     elif stage.stage_type == StageType.STAGE_2:
+        next_stage_type = StageType.FUNDED_REAL
+
+    # ایجاد مرحله‌ی بعدی با قوانین وارد شده
+    if next_stage_type:
+        rules = request.next_stage_rules or StageRules()
         next_stage = PropStage(
             prop_account_id=stage.prop_account_id,
-            stage_type=StageType.FUNDED_REAL,
+            stage_type=next_stage_type,
             status=StageStatus.ACTIVE,
             start_date=datetime.utcnow(),
-            initial_balance=stage.final_balance or stage.initial_balance,
-            profit_share_percentage=80.0,
+            initial_balance=rules.initial_balance or final_balance,
+            profit_target=rules.profit_target,
+            max_daily_dd=rules.max_daily_dd,
+            max_total_dd=rules.max_total_dd,
+            min_trading_days=rules.min_trading_days,
+            profit_share_percentage=rules.profit_share_percentage if next_stage_type == StageType.FUNDED_REAL else None,
         )
         db.add(next_stage)
         db.commit()
-        return {"message": "مرحله ۲ پاس شد. مرحله رییل ایجاد شد."}
 
-    return {"message": "مرحله پاس شد"}
+    return {
+        "message": "مرحله پاس شد. مرحله‌ی بعدی ایجاد شد.",
+        "final_balance": final_balance,
+        "total_pnl": total_pnl,
+    }
 
 
 @router.post("/stages/{stage_id}/fail")
@@ -266,11 +311,65 @@ def fail_stage(stage_id: int, request: FailStageRequest, db: Session = Depends(g
 
     stage.status = StageStatus.FAILED
     stage.end_date = datetime.utcnow()
-    stage.failure_reason = FailureReason(request.failure_reason)
+    
+    # تلاش برای تبدیل به enum، در غیر این صورت "other"
+    try:
+        stage.failure_reason = FailureReason(request.failure_reason)
+    except ValueError:
+        stage.failure_reason = FailureReason.OTHER
+    
     stage.failure_details = request.failure_details
     db.commit()
 
     return {"message": "مرحله فیل شد"}
+
+
+@router.patch("/stages/{stage_id}/rules")
+def update_stage_rules(stage_id: int, rules: StageRulesUpdate, db: Session = Depends(get_db)):
+    """ویرایش قوانین یک مرحله"""
+    stage = db.query(PropStage).filter(PropStage.id == stage_id).first()
+    if not stage:
+        raise HTTPException(status_code=404, detail="مرحله پیدا نشد")
+
+    if rules.profit_target is not None:
+        stage.profit_target = rules.profit_target
+    if rules.max_daily_dd is not None:
+        stage.max_daily_dd = rules.max_daily_dd
+    if rules.max_total_dd is not None:
+        stage.max_total_dd = rules.max_total_dd
+    if rules.min_trading_days is not None:
+        stage.min_trading_days = rules.min_trading_days
+    if rules.initial_balance is not None:
+        stage.initial_balance = rules.initial_balance
+    if rules.profit_share_percentage is not None:
+        stage.profit_share_percentage = rules.profit_share_percentage
+
+    db.commit()
+    db.refresh(stage)
+    return {"message": "قوانین مرحله با موفقیت به‌روزرسانی شد"}
+
+
+@router.get("/stages/{stage_id}/trades")
+def get_stage_trades(stage_id: int, db: Session = Depends(get_db)):
+    """دریافت معاملات یک مرحله"""
+    from ..models.strategy import Trade
+    trades = db.query(Trade).filter(Trade.prop_stage_id == stage_id).all()
+    return [
+        {
+            "id": t.id,
+            "symbol": t.symbol,
+            "direction": t.direction,
+            "open_time": t.open_time,
+            "close_time": t.close_time,
+            "open_price": t.open_price,
+            "close_price": t.close_price,
+            "size": t.size,
+            "pnl": t.pnl,
+            "commission": t.commission,
+            "swap": t.swap,
+        }
+        for t in trades
+    ]
 
 
 # ═════════════════════════════════════════════
@@ -285,6 +384,7 @@ def withdraw(stage_id: int, request: WithdrawalCreate, db: Session = Depends(get
     if stage.stage_type != StageType.FUNDED_REAL:
         raise HTTPException(status_code=400, detail="برداشت فقط در مرحله رییل مجاز است")
 
+    # ثبت برداشت
     withdrawal = PropWithdrawal(
         prop_stage_id=stage_id,
         amount=request.amount,
@@ -294,9 +394,24 @@ def withdraw(stage_id: int, request: WithdrawalCreate, db: Session = Depends(get
 
     stage.total_withdrawn = (stage.total_withdrawn or 0) + request.amount
     stage.current_profit = (stage.current_profit or 0) - request.amount
+
+    # ثبت در دفتر کل (به‌عنوان درآمد)
+    try:
+        from ..models.personal import LedgerTransaction, TransactionType
+        ledger = LedgerTransaction(
+            transaction_type=TransactionType.PROP_PAYOUT,
+            source_type="prop_stage",
+            source_id=stage_id,
+            amount=request.amount,
+            description=f"برداشت از {stage.stage_type.value} - {request.note or ''}",
+        )
+        db.add(ledger)
+    except Exception as e:
+        print(f"⚠️ خطا در ثبت Ledger: {e}")
+
     db.commit()
 
-    return {"message": f"{request.amount} دلار برداشت ثبت شد"}
+    return {"message": f"{request.amount} دلار برداشت ثبت شد و به درآمد اضافه شد"}
 
 
 @router.get("/stages/{stage_id}/withdrawals")

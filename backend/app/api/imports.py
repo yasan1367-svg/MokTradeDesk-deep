@@ -15,6 +15,7 @@ router = APIRouter()
 async def import_soft4x(
     file: UploadFile = File(...),
     version_id: Optional[int] = Form(None),
+    prop_stage_id: Optional[int] = Form(None),
     symbol: Optional[str] = Form("XAUUSD"),
     test_type: Optional[str] = Form("backtest"),
     db: Session = Depends(get_db)
@@ -35,11 +36,14 @@ async def import_soft4x(
             version = db.query(StrategyVersion).filter(StrategyVersion.id == version_id).first()
             if not version:
                 raise HTTPException(status_code=404, detail="نسخه استراتژی پیدا نشد")
-            saved_trades = importer.save_trades(trades, version_id)
-            message = f"{len(saved_trades)} معامله با موفقیت وارد شد"
+            saved_trades = importer.save_trades(trades, version_id=version_id)
+            message = f"{len(saved_trades)} معامله با موفقیت وارد شد (استراتژی)"
+        elif prop_stage_id:
+            saved_trades = importer.save_trades(trades, prop_stage_id=prop_stage_id)
+            message = f"{len(saved_trades)} معامله با موفقیت وارد شد (پراپ)"
         else:
             saved_trades = []
-            message = f"{len(trades)} معامله شناسایی شد. برای ذخیره، version_id را وارد کنید."
+            message = f"{len(trades)} معامله شناسایی شد. برای ذخیره، version_id یا prop_stage_id را وارد کنید."
 
         return {
             "message": message,
@@ -92,7 +96,7 @@ async def import_mt4(
             if not version:
                 raise HTTPException(status_code=404, detail="نسخه استراتژی پیدا نشد")
             saved = importer.save_trades(trades, version_id=version_id)
-            message = f"{len(saved)} معامله با موفقیت وارد شد"
+            message = f"{len(saved)} معامله با موفقیت وارد شد (استراتژی)"
         elif prop_stage_id:
             saved = importer.save_trades(trades, prop_stage_id=prop_stage_id)
             message = f"{len(saved)} معامله با موفقیت وارد شد (پراپ)"

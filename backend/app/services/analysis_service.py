@@ -127,6 +127,108 @@ class AnalysisService:
         return max(score, 0)
 
     # ═════════════════════════════════════════════
+    # پیشرفت مرحله‌ی پراپ
+    # ═════════════════════════════════════════════
+    def calculate_stage_progress(self, stage_id: int) -> Dict[str, Any]:
+        """محاسبه‌ی پیشرفت یک مرحله‌ی پراپ نسبت به قوانین"""
+        from ..models.prop import PropStage
+
+        stage = self.db.query(PropStage).filter(PropStage.id == stage_id).first()
+        if not stage:
+            return {}
+
+        trades = self.db.query(Trade).filter(Trade.prop_stage_id == stage_id).all()
+        total_pnl = sum(t.pnl or 0 for t in trades)
+        initial = stage.initial_balance or 10000
+        profit_percent = (total_pnl / initial * 100) if initial > 0 else 0
+
+        # محاسبه‌ی DD روزانه (بیشترین ضرر در یک روز)
+        daily_pnl: Dict[str, float] = {}
+        for t in trades:
+            if not t.close_time:
+                continue
+            day_key = t.close_time.strftime('%Y-%m-%d')
+            daily_pnl[day_key] = daily_pnl.get(day_key, 0) + (t.pnl or 0)
+
+        max_daily_loss = min(daily_pnl.values()) if daily_pnl else 0
+        max_daily_dd_percent = abs(max_daily_loss / initial * 100) if initial > 0 else 0
+
+        # محاسبه‌ی DD کلی (max drawdown)
+        sorted_trades = sorted(trades, key=lambda t: t.close_time or t.open_time)
+        equity = initial
+        peak = initial
+        max_dd = 0
+        for t in sorted_trades:
+            equity += t.pnl or 0
+            if equity > peak:
+                peak = equity
+            dd = peak - equity
+            if dd > max_dd:
+                max_dd = dd
+        max_dd_percent = (max_dd / initial * 100) if initial > 0 else 0
+
+        # تعداد روزهای معاملاتی
+        trading_days = len(daily_pnl)
+
+        # قوانین
+        profit_target = stage.profit_target or 0
+        max_daily_dd_limit = stage.max_daily_dd or 0
+        max_total_dd_limit = stage.max_total_dd or 0
+        min_days = stage.min_trading_days or 0
+
+        # بررسی وضعیت
+        daily_dd_violated = max_daily_dd_percent > max_daily_dd_limit if max_daily_dd_limit > 0 else False
+        total_dd_violated = max_dd_percent > max_total_dd_limit if max_total_dd_limit > 0 else False
+        target_reached = profit_percent >= profit_target if profit_target > 0 else False
+        min_days_met = trading_days >= min_days if min_days > 0 else True
+
+        # وضعیت پیشنهادی
+        if daily_dd_violated:
+            suggested_status = "failed_daily_dd"
+        elif total_dd_violated:
+            suggested_status = "failed_total_dd"
+        elif target_reached and min_days_met:
+            suggested_status = "ready_to_pass"
+        else:
+            suggested_status = "in_progress"
+
+        return {
+            "stage_id": stage_id,
+            "stage_type": stage.stage_type.value if stage.stage_type else None,
+            "status": stage.status.value if stage.status else None,
+
+            # سود
+            "current_profit": round(total_pnl, 2),
+            "current_profit_percent": round(profit_percent, 2),
+            "profit_target_percent": profit_target,
+            "profit_progress_percent": round((profit_percent / profit_target * 100) if profit_target > 0 else 0, 2),
+
+            # DD روزانه
+            "max_daily_dd_percent": round(max_daily_dd_percent, 2),
+            "max_daily_dd_limit": max_daily_dd_limit,
+            "daily_dd_progress_percent": round((max_daily_dd_percent / max_daily_dd_limit * 100) if max_daily_dd_limit > 0 else 0, 2),
+
+            # DD کلی
+            "max_total_dd_percent": round(max_dd_percent, 2),
+            "max_total_dd_limit": max_total_dd_limit,
+            "total_dd_progress_percent": round((max_dd_percent / max_total_dd_limit * 100) if max_total_dd_limit > 0 else 0, 2),
+
+            # روزها
+            "trading_days": trading_days,
+            "min_trading_days": min_days,
+            "days_met": min_days_met,
+
+            # وضعیت
+            "daily_dd_violated": daily_dd_violated,
+            "total_dd_violated": total_dd_violated,
+            "target_reached": target_reached,
+            "suggested_status": suggested_status,
+
+            # تعداد معاملات
+            "total_trades": len(trades),
+        }
+
+    # ═════════════════════════════════════════════
     # متریک‌های پایه
     # ═════════════════════════════════════════════
     def _calculate_basic_metrics(self, trades: List[Trade]) -> Dict[str, Any]:

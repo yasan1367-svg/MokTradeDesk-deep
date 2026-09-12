@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import GlassCard from '../components/GlassCard';
-import { getAllVersions, importSoft4X, importMT4 } from '../api/client';
+import { getAllVersions, importSoft4X, importMT4, getAllPropStages } from '../api/client';
 
 interface Version {
   id: number;
@@ -8,9 +8,17 @@ interface Version {
   strategy_name: string;
 }
 
+interface PropStage {
+  id: number;
+  display_name: string;
+}
+
 export default function ImportPage() {
   const [versions, setVersions] = useState<Version[]>([]);
+  const [propStages, setPropStages] = useState<PropStage[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
+  const [selectedPropStage, setSelectedPropStage] = useState<number | null>(null);
+  const [importTarget, setImportTarget] = useState<'strategy' | 'prop'>('strategy');
   const [fileType, setFileType] = useState<'soft4x' | 'mt4'>('soft4x');
   const [symbol, setSymbol] = useState<string>('XAUUSD');
   const [testType, setTestType] = useState<'backtest' | 'forward' | 'real'>('backtest');
@@ -25,6 +33,10 @@ export default function ImportPage() {
     getAllVersions()
       .then((res) => setVersions(res.data))
       .catch((err) => console.error('خطا در دریافت نسخه‌ها:', err));
+
+    getAllPropStages()
+      .then((res) => setPropStages(res.data))
+      .catch((err) => console.error('خطا در دریافت مراحل پراپ:', err));
   }, []);
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -67,9 +79,33 @@ export default function ImportPage() {
     try {
       let response;
       if (fileType === 'soft4x') {
-        response = await importSoft4X(file, selectedVersion || undefined, symbol, testType);
+        if (importTarget === 'strategy') {
+          response = await importSoft4X(
+            file,
+            selectedVersion || undefined,
+            symbol,
+            testType
+          );
+        } else {
+          response = await importSoft4X(
+            file,
+            undefined,
+            symbol,
+            testType,
+            selectedPropStage || undefined
+          );
+        }
       } else {
-        response = await importMT4(file, selectedVersion || undefined, testType);
+        if (importTarget === 'strategy') {
+          response = await importMT4(file, selectedVersion || undefined, testType);
+        } else {
+          response = await importMT4(
+            file,
+            undefined,
+            testType,
+            selectedPropStage || undefined
+          );
+        }
       }
       setResult(response.data);
     } catch (err: any) {
@@ -105,6 +141,29 @@ export default function ImportPage() {
                 }`}
               >
                 📈 متاتریدر (HTML)
+              </button>
+            </div>
+          </div>
+
+          {/* مقصد واردات */}
+          <div className="mb-5">
+            <label className="text-text-secondary text-sm block mb-2">مقصد واردات</label>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setImportTarget('strategy')}
+                className={`flex-1 py-3 rounded-xl transition-all ${
+                  importTarget === 'strategy' ? 'bg-accent text-white' : 'bg-card border border-card-border text-text-secondary'
+                }`}
+              >
+                📈 استراتژی
+              </button>
+              <button
+                onClick={() => setImportTarget('prop')}
+                className={`flex-1 py-3 rounded-xl transition-all ${
+                  importTarget === 'prop' ? 'bg-accent text-white' : 'bg-card border border-card-border text-text-secondary'
+                }`}
+              >
+                🏢 پراپ
               </button>
             </div>
           </div>
@@ -146,22 +205,40 @@ export default function ImportPage() {
             </div>
           </div>
 
-          {/* نسخه */}
-          <div className="mb-5">
-            <label className="text-text-secondary text-sm block mb-2">نسخه‌ی استراتژی</label>
-            <select
-              value={selectedVersion || ''}
-              onChange={(e) => setSelectedVersion(e.target.value ? Number(e.target.value) : null)}
-              className="w-full bg-card border border-card-border rounded-xl px-4 py-3 text-text-primary focus:border-accent focus:outline-none"
-            >
-              <option value="">— بدون نسخه —</option>
-              {versions.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.strategy_name} / {v.version_name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* انتخاب مقصد */}
+          {importTarget === 'strategy' ? (
+            <div className="mb-5">
+              <label className="text-text-secondary text-sm block mb-2">نسخه‌ی استراتژی</label>
+              <select
+                value={selectedVersion || ''}
+                onChange={(e) => setSelectedVersion(e.target.value ? Number(e.target.value) : null)}
+                className="w-full bg-card border border-card-border rounded-xl px-4 py-3 text-text-primary focus:border-accent focus:outline-none"
+              >
+                <option value="">— انتخاب نسخه —</option>
+                {versions.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.strategy_name} / {v.version_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="mb-5">
+              <label className="text-text-secondary text-sm block mb-2">مرحله‌ی پراپ</label>
+              <select
+                value={selectedPropStage || ''}
+                onChange={(e) => setSelectedPropStage(e.target.value ? Number(e.target.value) : null)}
+                className="w-full bg-card border border-card-border rounded-xl px-4 py-3 text-text-primary focus:border-accent focus:outline-none"
+              >
+                <option value="">— انتخاب مرحله —</option>
+                {propStages.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.display_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </GlassCard>
 
         {/* آپلود */}
