@@ -9,6 +9,12 @@ import {
   analyzeVersion,
 } from '../api/client';
 
+import EquityCurveChart from '../components/charts/EquityCurveChart';
+import SessionBarChart from '../components/charts/SessionBarChart';
+import WinLossPieChart from '../components/charts/WinLossPieChart';
+import WeekdayBarChart from '../components/charts/WeekdayBarChart';
+import PnLDistributionChart from '../components/charts/PnLDistributionChart';
+
 interface Version {
   id: number;
   version_name: string;
@@ -168,6 +174,46 @@ export default function AnalysisPage() {
               icon="⚠️"
             />
           </div>
+
+{/* نمودارها */}
+<div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+  <GlassCard className="lg:col-span-2">
+    <h3 className="text-text-primary font-bold mb-4">📈 منحنی سرمایه</h3>
+    <EquityCurveChart trades={trades} initialBalance={10000} />
+  </GlassCard>
+
+  <GlassCard>
+    <h3 className="text-text-primary font-bold mb-4">🥇 برد / باخت</h3>
+    <WinLossPieChart
+      wins={Math.round((analysis.win_rate / 100) * analysis.total_trades)}
+      losses={analysis.total_trades - Math.round((analysis.win_rate / 100) * analysis.total_trades)}
+    />
+  </GlassCard>
+</div>
+
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <GlassCard>
+    <h3 className="text-text-primary font-bold mb-4">🌍 نرخ برد بر اساس سشن</h3>
+    <SessionBarChart data={analysis.session_analysis || {}} metric="win_rate" />
+  </GlassCard>
+
+  <GlassCard>
+    <h3 className="text-text-primary font-bold mb-4">📅 نرخ برد بر اساس روز هفته</h3>
+    <WeekdayBarChart data={analysis.weekday_analysis || {}} metric="win_rate" />
+  </GlassCard>
+</div>
+
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <GlassCard>
+    <h3 className="text-text-primary font-bold mb-4">💰 توزیع سود بر اساس نماد</h3>
+    <PnLDistributionChart trades={trades} />
+  </GlassCard>
+
+  <GlassCard>
+    <h3 className="text-text-primary font-bold mb-4">💵 سود خالص بر اساس سشن</h3>
+    <SessionBarChart data={analysis.session_analysis || {}} metric="net_pnl" />
+  </GlassCard>
+</div>
 
           {/* تحلیل‌های تفکیکی */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">

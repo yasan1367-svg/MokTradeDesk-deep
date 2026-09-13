@@ -1,0 +1,82 @@
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
+interface EquityCurveChartProps {
+  trades: any[];
+  initialBalance?: number;
+  height?: number;
+}
+
+export default function EquityCurveChart({ trades, initialBalance = 0, height = 250 }: EquityCurveChartProps) {
+  const sorted = [...trades]
+    .filter((t) => t.close_time)
+    .sort((a, b) => new Date(a.close_time).getTime() - new Date(b.close_time).getTime());
+
+  let equity = initialBalance;
+  const data = sorted.map((t, idx) => {
+    equity += t.pnl || 0;
+    return {
+      index: idx + 1,
+      date: new Date(t.close_time).toLocaleDateString('fa-IR'),
+      equity: Math.round(equity * 100) / 100,
+      pnl: t.pnl || 0,
+    };
+  });
+
+  data.unshift({
+    index: 0,
+    date: 'شروع',
+    equity: initialBalance,
+    pnl: 0,
+  });
+
+  if (data.length < 2) {
+    return (
+      <div className="text-text-secondary text-center py-8 text-sm">
+        داده‌ای برای نمایش منحنی سرمایه وجود ندارد
+      </div>
+    );
+  }
+
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+        <defs>
+          <linearGradient id="equityGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#00D4AA" stopOpacity={0.3} />
+            <stop offset="95%" stopColor="#00D4AA" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="#2A2A3A" />
+        <XAxis
+          dataKey="index"
+          stroke="#8888A0"
+          style={{ fontSize: '10px' }}
+          tick={{ fill: '#8888A0' }}
+        />
+        <YAxis
+          stroke="#8888A0"
+          style={{ fontSize: '10px' }}
+          tick={{ fill: '#8888A0' }}
+        />
+        <Tooltip
+          contentStyle={{
+            backgroundColor: '#14141E',
+            border: '1px solid #2A2A3A',
+            borderRadius: '12px',
+            color: '#F0F0F5',
+            fontSize: '12px',
+          }}
+          formatter={(value: any) => [`${value} $`, 'سرمایه']}
+          labelFormatter={(label) => `معامله #${label}`}
+        />
+        <Area
+          type="monotone"
+          dataKey="equity"
+          stroke="#00D4AA"
+          strokeWidth={2}
+          fill="url(#equityGradient)"
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}

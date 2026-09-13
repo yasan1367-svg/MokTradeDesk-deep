@@ -237,3 +237,73 @@ export const getTradeScreenshots = (tradeId: number) =>
 
 export const deleteScreenshot = (screenshotId: number) =>
   api.delete(`/api/trades/screenshots/${screenshotId}`);
+
+// ─────────────────────────────────────────────
+// Personal Accounts & Accounting
+// ─────────────────────────────────────────────
+export const getPersonalAccounts = () => api.get('/api/personal/accounts');
+
+export const createPersonalAccount = (data: {
+  name: string;
+  broker_name: string;
+  account_number?: string;
+  currency?: string;
+  initial_balance?: number;
+}) => api.post('/api/personal/accounts', data);
+
+export const getPersonalAccountDetail = (accountId: number) =>
+  api.get(`/api/personal/accounts/${accountId}`);
+
+export const updatePersonalAccount = (accountId: number, data: any) =>
+  api.patch(`/api/personal/accounts/${accountId}`, data);
+
+export const deletePersonalAccount = (accountId: number) =>
+  api.delete(`/api/personal/accounts/${accountId}`);
+
+// ─────────────────────────────────────────────
+// Ledger
+// ─────────────────────────────────────────────
+export const getLedger = (params?: {
+  personal_account_id?: number;
+  transaction_type?: string;
+  from_date?: string;
+  to_date?: string;
+  limit?: number;
+}) => api.get('/api/personal/ledger', { params });
+
+export const createLedgerTransaction = (data: {
+  transaction_type: string;
+  amount: number;
+  currency?: string;
+  description?: string;
+  personal_account_id?: number;
+  prop_account_id?: number;
+  transaction_date?: string;
+}) => api.post('/api/personal/ledger', data);
+
+export const deleteLedgerTransaction = (transactionId: number) =>
+  api.delete(`/api/personal/ledger/${transactionId}`);
+
+export const getCashflow = (params?: { from_date?: string; to_date?: string }) =>
+  api.get('/api/personal/cashflow', { params });
+
+// ─────────────────────────────────────────────
+// Journal
+// ─────────────────────────────────────────────
+export const createJournalReview = (data: {
+  trade_id: number;
+  setup_quality?: number;
+  execution_quality?: number;
+  rule_violations?: string;
+  notes?: string;
+  lessons?: string;
+  rating?: number;
+}) => api.post('/api/personal/journal/review', data);
+
+export const getJournalReviews = () => api.get('/api/personal/journal/reviews');
+
+export const deleteJournalReview = (reviewId: number) =>
+  api.delete(`/api/personal/journal/reviews/${reviewId}`);
+
+export const getPropAccountsForLedger = () =>
+  api.get('/api/personal/prop-accounts-list');

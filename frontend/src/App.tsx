@@ -8,8 +8,9 @@ import { compareVersions } from './api/client';
 import StrategyPage from './pages/StrategyPage';
 import TradesPage from './pages/TradesPage';
 import ComparisonPage from './pages/ComparisonPage';
+import PersonalPage from './pages/PersonalPage';
 
-type Page = 'dashboard' | 'analysis' | 'comparison' | 'strategy' | 'trades' | 'prop' | 'import';
+type Page = 'dashboard' | 'analysis' | 'comparison' | 'strategy' | 'trades' | 'prop' | 'import' | 'personal';
 
 function App() {
   const [page, setPage] = useState<Page>('dashboard');
@@ -46,6 +47,8 @@ function App() {
             { key: 'trades', label: '📋 معاملات' },
             { key: 'prop', label: '🏢 پراپ' },
             { key: 'import', label: '📥 واردات' },
+              { key: 'personal', label: '🏦 شخصی' },
+
           ].map((item) => (
             <button
               key={item.key}
@@ -137,6 +140,7 @@ function App() {
       {page === 'strategy' && <StrategyPage />}
       {page === 'trades' && <TradesPage />}
       {page === 'comparison' && <ComparisonPage />}
+      {page === 'personal' && <PersonalPage />}
     </div>
   );
 }
