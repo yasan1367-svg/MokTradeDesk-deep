@@ -66,6 +66,7 @@ class FailStageRequest(BaseModel):
 class WithdrawalCreate(BaseModel):
     amount: float
     note: Optional[str] = None
+    target_personal_account_id: Optional[int] = None  # ← اکانت شخصی مقصد
 
 
 class PropCostCreate(BaseModel):
@@ -414,20 +415,51 @@ def withdraw(stage_id: int, request: WithdrawalCreate, db: Session = Depends(get
     return {"message": f"{request.amount} دلار برداشت ثبت شد و به درآمد اضافه شد"}
 
 
-@router.get("/stages/{stage_id}/withdrawals")
-def get_withdrawals(stage_id: int, db: Session = Depends(get_db)):
-    withdrawals = db.query(PropWithdrawal).filter(
-        PropWithdrawal.prop_stage_id == stage_id
-    ).all()
-    return [
-        {
-            "id": w.id,
-            "amount": w.amount,
-            "withdrawal_date": w.withdrawal_date,
-            "note": w.note,
-        }
-        for w in withdrawals
-    ]
+@router.post("/stages/{stage_id}/withdraw")
+def withdraw(stage_id: int, request: WithdrawalCreate, db: Session = Depends(get_db)):
+    stage = db.query(PropStage).filter(PropStage.id == stage_id).first()
+    if not stage:
+        raise HTTPException(status_code=404, detail="مرحله پیدا نشد")
+
+    if stage.stage_type != StageType.FUNDED_REAL:
+        raise HTTPException(status_code=400, detail="برداشت فقط در مرحله رییل مجاز است")
+
+    # ثبت برداشت
+    withdrawal = PropWithdrawal(
+        prop_stage_id=stage_id,
+        amount=request.amount,
+        note=request.note,
+    )
+    db.add(withdrawal)
+
+    stage.total_withdrawn = (stage.total_withdrawn or 0) + request.amount
+    stage.current_profit = (stage.current_profit or 0) - request.amount
+
+    # ثبت در دفتر کل
+    try:
+        from ..models.personal import LedgerTransaction, TransactionType
+        account = db.query(PropAccount).filter(PropAccount.id == stage.prop_account_id).first()
+
+        description = f"برداشت از {account.account_label if account else 'پراپ'}"
+        if request.note:
+            description += f" - {request.note}"
+
+        ledger = LedgerTransaction(
+            transaction_type=TransactionType.PROP_PAYOUT,
+            source_type="prop_stage",
+            source_id=stage_id,
+            prop_account_id=stage.prop_account_id,
+            personal_account_id=request.target_personal_account_id,  # ← اکانت شخصی مقصد
+            amount=request.amount,
+            description=description,
+        )
+        db.add(ledger)
+    except Exception as e:
+        print(f"⚠️ خطا در ثبت Ledger: {e}")
+
+    db.commit()
+
+    return {"message": f"{request.amount} دلار برداشت ثبت شد و به درآمد اضافه شد"}
 
 
 # ═════════════════════════════════════════════
