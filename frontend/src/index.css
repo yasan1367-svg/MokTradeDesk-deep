@@ -4,6 +4,32 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg-base: #EEF2F9;
+  --bg-card: #FFFFFF;
+  --bg-input: #F8FAFF;
+  --bg-elevated: #F5F7FB;
+  --bg-sidebar: #152238;
+  --bg-sidebar-hover: #1E2F4D;
+
+  --text-primary: #1A2B47;
+  --text-secondary: #6B7A94;
+  --text-muted: #9AA8BF;
+
+  --accent: #3F7CFF;
+  --accent-soft: #EDF3FF;
+  --profit: #13AE81;
+  --profit-soft: #E5F8F1;
+  --loss: #E45D72;
+  --loss-soft: #FFEDF0;
+  --warning: #D99B25;
+  --purple: #7959D6;
+
+  --border-subtle: #E5EBF3;
+  --border-medium: #D5DDE8;
+  --border-accent: #A9C1FA;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -14,41 +40,32 @@ html, body, #root {
   height: 100%;
   direction: rtl;
   font-family: 'Vazirmatn', sans-serif;
-  background: #0A0A0F;
-  color: #F0F0F5;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+.accent-gradient {
+  background: linear-gradient(135deg, #3F7CFF, #5B8DEF);
 }
 
-::-webkit-scrollbar-track {
-  background: #14141E;
+.accent-gradient-text {
+  background: linear-gradient(135deg, #3F7CFF, #7959D6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #2A2A3A;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #6C63FF;
-}
-
-/* Glass card base */
+/* سازگاری با صفحات قدیمی - این کلاس‌ها را نگه می‌داریم */
 .glass-card {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 24px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  transition: all 0.2s ease;
-}
-
-.glass-card:hover {
-  border-color: rgba(108, 99, 255, 0.3);
-  box-shadow: 0 12px 40px rgba(108, 99, 255, 0.15);
+  background: #FFFFFF;
+  border: 1px solid #E5EBF3;
+  border-radius: 20px;
+  box-shadow: 0 6px 16px rgba(25, 50, 85, 0.08);
 }

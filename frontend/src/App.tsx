@@ -1,148 +1,64 @@
 import { useState } from 'react';
-import StatCard from './components/StatCard';
-import GlassCard from './components/GlassCard';
-import ImportPage from './pages/ImportPage';
+import Sidebar from './components/Sidebar';
 import AnalysisPage from './pages/AnalysisPage';
-import PropPage from './pages/PropPage';
-import { compareVersions } from './api/client';
+import ComparisonPage from './pages/ComparisonPage';
 import StrategyPage from './pages/StrategyPage';
 import TradesPage from './pages/TradesPage';
-import ComparisonPage from './pages/ComparisonPage';
+import PropPage from './pages/PropPage';
 import PersonalPage from './pages/PersonalPage';
+import ImportPage from './pages/ImportPage';
+import DashboardPage from './pages/DashboardPage';
 
-type Page = 'dashboard' | 'analysis' | 'comparison' | 'strategy' | 'trades' | 'prop' | 'import' | 'personal';
+type Page = 'dashboard' | 'analysis' | 'comparison' | 'strategy' | 'trades' | 'prop' | 'personal' | 'import';
 
-function App() {
+const PAGE_TITLES: Record<Page, { title: string; subtitle: string }> = {
+  dashboard: { title: '📊 داشبورد', subtitle: 'نمای کلی عملکرد معاملاتی' },
+  analysis: { title: '📈 تحلیل', subtitle: 'تحلیل کامل یک نسخه' },
+  comparison: { title: '⚖️ مقایسه', subtitle: 'مقایسه‌ی چند نسخه' },
+  strategy: { title: '🎯 استراتژی', subtitle: 'مدیریت استراتژی‌ها و نسخه‌ها' },
+  trades: { title: '📋 معاملات', subtitle: 'مدیریت معاملات و اسکرین‌شات' },
+  prop: { title: '🏢 پراپ', subtitle: 'مدیریت چالش‌های پراپ' },
+  personal: { title: '🏦 شخصی', subtitle: 'معاملات شخصی و حسابداری' },
+  import: { title: '📥 واردات', subtitle: 'واردات معاملات از فایل' },
+};
+
+export default function App() {
   const [page, setPage] = useState<Page>('dashboard');
-  const [comparison, setComparison] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleCompare = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await compareVersions([2, 3]);
-      setComparison(response.data);
-    } catch (err: any) {
-      setError(err.message || 'خطا در مقایسه');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
-    <div className="min-h-screen p-6">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold bg-gradient-to-l from-accent to-profit bg-clip-text text-transparent">
-          🚀 MokTradeDesk
-        </h1>
+    <div className="flex h-screen overflow-hidden bg-bg-base">
+      <Sidebar currentPage={page} onNavigate={(p) => setPage(p as Page)} />
 
-        <div className="flex gap-2 flex-wrap">
-          {[
-            { key: 'dashboard', label: '📊 داشبورد' },
-            { key: 'analysis', label: '📈 تحلیل' },
-            { key: 'comparison', label: '⚖️ مقایسه' },
-            { key: 'strategy', label: '🎯 استراتژی' },
-            { key: 'trades', label: '📋 معاملات' },
-            { key: 'prop', label: '🏢 پراپ' },
-            { key: 'import', label: '📥 واردات' },
-              { key: 'personal', label: '🏦 شخصی' },
-
-          ].map((item) => (
-            <button
-              key={item.key}
-              onClick={() => setPage(item.key as Page)}
-              className={`px-5 py-2 rounded-xl transition-all ${
-                page === item.key
-                  ? 'bg-accent text-white'
-                  : 'glass-card text-text-secondary hover:text-text-primary'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {page === 'dashboard' && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-            <StatCard label="💰 سود خالص" value="+29.85 $" sub="▲ 2.5٪" color="profit" />
-            <StatCard label="📈 نرخ برد" value="66.67٪" sub="از 3 معامله" />
-            <StatCard label="⚠️ حداکثر ضرر" value="-29.99 $" sub="کمترین نقطه" color="loss" />
-            <StatCard label="🏆 فاکتور سود" value="2.0" sub="سود کل / ضرر کل" color="accent" />
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <div className="h-[68px] bg-white/85 backdrop-blur-xl border-b border-[#E5EBF3] flex items-center justify-between px-7 shrink-0">
+          <div>
+            <div className="text-base font-bold text-[#1A2B47]">{PAGE_TITLES[page].title}</div>
+            <div className="text-xs text-[#6B7A94] mt-0.5">{PAGE_TITLES[page].subtitle}</div>
           </div>
+          <div className="flex gap-3 items-center">
+            <button className="w-10 h-10 rounded-xl bg-white border border-[#E5EBF3] flex items-center justify-center cursor-pointer text-base text-[#6B7A94] transition-all hover:bg-[#EDF3FF] hover:border-[#A9C1FA] hover:text-[#3F7CFF]">
+              🔔
+            </button>
+            <button className="w-10 h-10 rounded-xl bg-white border border-[#E5EBF3] flex items-center justify-center cursor-pointer text-base text-[#6B7A94] transition-all hover:bg-[#EDF3FF] hover:border-[#A9C1FA] hover:text-[#3F7CFF]">
+              ☀️
+            </button>
+            <button className="w-10 h-10 rounded-xl bg-white border border-[#E5EBF3] flex items-center justify-center cursor-pointer text-base text-[#6B7A94] transition-all hover:bg-[#EDF3FF] hover:border-[#A9C1FA] hover:text-[#3F7CFF]">
+              ⚙️
+            </button>
+          </div>
+        </div>
 
-          <GlassCard className="mb-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">📊 مقایسه‌ی نسخه‌ها</h2>
-              <button
-                onClick={handleCompare}
-                disabled={loading}
-                className="bg-accent hover:bg-accent/80 text-white px-6 py-2 rounded-xl transition-all disabled:opacity-50"
-              >
-                {loading ? 'در حال مقایسه...' : 'مقایسه کن'}
-              </button>
-            </div>
-
-            {error && (
-              <div className="bg-loss/10 border border-loss/30 text-loss p-3 rounded-xl mb-4">
-                {error}
-              </div>
-            )}
-
-            {comparison && (
-              <>
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-text-secondary text-sm">
-                      <th className="text-right pb-3">نسخه</th>
-                      <th className="text-right pb-3">معاملات</th>
-                      <th className="text-right pb-3">نرخ برد</th>
-                      <th className="text-right pb-3">فاکتور سود</th>
-                      <th className="text-right pb-3">سود خالص</th>
-                      <th className="text-right pb-3">امتیاز</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {comparison.items.map((item: any, idx: number) => (
-                      <tr
-                        key={item.version_id}
-                        className={`border-t border-card-border ${
-                          idx === 0 ? 'text-profit font-bold' : 'text-text-primary'
-                        }`}
-                      >
-                        <td className="py-3">{item.version_name}</td>
-                        <td className="py-3">{item.total_trades}</td>
-                        <td className="py-3">{item.win_rate}٪</td>
-                        <td className="py-3">{item.profit_factor}</td>
-                        <td className="py-3">{item.net_pnl} $</td>
-                        <td className="py-3">{item.score}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                <div className="mt-6 bg-accent/10 border border-accent/30 text-text-primary p-4 rounded-xl">
-                  <span className="text-accent font-bold">💡 پیشنهاد: </span>
-                  {comparison.recommendation}
-                </div>
-              </>
-            )}
-          </GlassCard>
-        </>
-      )}
-
-      {page === 'analysis' && <AnalysisPage />}
-      {page === 'prop' && <PropPage />}
-      {page === 'import' && <ImportPage />}
-      {page === 'strategy' && <StrategyPage />}
-      {page === 'trades' && <TradesPage />}
-      {page === 'comparison' && <ComparisonPage />}
-      {page === 'personal' && <PersonalPage />}
+        <div className="flex-1 overflow-y-auto p-7">
+          {page === 'dashboard' && <DashboardPage />}
+          {page === 'analysis' && <AnalysisPage />}
+          {page === 'comparison' && <ComparisonPage />}
+          {page === 'strategy' && <StrategyPage />}
+          {page === 'trades' && <TradesPage />}
+          {page === 'prop' && <PropPage />}
+          {page === 'personal' && <PersonalPage />}
+          {page === 'import' && <ImportPage />}
+        </div>
+      </main>
     </div>
   );
 }
-
-export default App;
