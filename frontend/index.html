@@ -1,13 +1,71 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
+@import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-base: #EEF2F9;
+  --bg-card: #FFFFFF;
+  --bg-input: #F8FAFF;
+  --bg-elevated: #F5F7FB;
+  --bg-sidebar: #152238;
+  --bg-sidebar-hover: #1E2F4D;
+
+  --text-primary: #1A2B47;
+  --text-secondary: #6B7A94;
+  --text-muted: #9AA8BF;
+
+  --accent: #3F7CFF;
+  --accent-soft: #EDF3FF;
+  --profit: #13AE81;
+  --profit-soft: #E5F8F1;
+  --loss: #E45D72;
+  --loss-soft: #FFEDF0;
+  --warning: #D99B25;
+  --purple: #7959D6;
+
+  --border-subtle: #E5EBF3;
+  --border-medium: #D5DDE8;
+  --border-accent: #A9C1FA;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  direction: rtl;
+  font-family: 'Vazirmatn', sans-serif;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+.accent-gradient {
+  background: linear-gradient(135deg, #3F7CFF, #5B8DEF);
+}
+
+.accent-gradient-text {
+  background: linear-gradient(135deg, #3F7CFF, #7959D6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* سازگاری با صفحات قدیمی - این کلاس‌ها را نگه می‌داریم */
+.glass-card {
+  background: #FFFFFF;
+  border: 1px solid #E5EBF3;
+  border-radius: 20px;
+  box-shadow: 0 6px 16px rgba(25, 50, 85, 0.08);
+}
