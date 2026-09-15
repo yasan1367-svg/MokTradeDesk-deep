@@ -114,9 +114,17 @@ export const failStage = (stageId: number, failureReason: string, failureDetails
     failure_details: failureDetails,
   });
 
-export const withdrawFromStage = (stageId: number, amount: number, note?: string) =>
-  api.post(`/api/prop/stages/${stageId}/withdraw`, { amount, note });
-
+export const withdrawFromStage = (
+  stageId: number,
+  amount: number,
+  note?: string,
+  targetPersonalAccountId?: number
+) =>
+  api.post(`/api/prop/stages/${stageId}/withdraw`, {
+    amount,
+    note,
+    target_personal_account_id: targetPersonalAccountId,
+  });
 export const getStageWithdrawals = (stageId: number) =>
   api.get(`/api/prop/stages/${stageId}/withdrawals`);
 
