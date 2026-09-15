@@ -68,8 +68,7 @@ class Screenshot(Base):
     __tablename__ = "screenshots"
 
     id = Column(Integer, primary_key=True, index=True)
-    trade_id = Column(Integer, ForeignKey("trades.id"), nullable=True)
-    entity_type = Column(String, nullable=False)  # trade, review, setup, test_run
+    entity_type = Column(String, nullable=False)
     entity_id = Column(Integer, nullable=False)
     review_id = Column(Integer, ForeignKey("journal_reviews.id"), nullable=True)
     file_path = Column(String, nullable=False)

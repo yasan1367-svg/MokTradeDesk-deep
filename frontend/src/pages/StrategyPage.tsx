@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import GlassCard from '../components/GlassCard';
 import {
   getStrategies,
   createStrategy,
@@ -46,19 +45,19 @@ const getStatusLabel = (status: string) => {
   return found ? found.label : status;
 };
 
-const getStatusColor = (status: string) => {
-  const colors: Record<string, string> = {
-    research: 'bg-text-secondary/20 text-text-secondary',
-    backtest: 'bg-accent/20 text-accent',
-    optimization: 'bg-accent/20 text-accent',
-    forward: 'bg-accent/20 text-accent',
-    approved: 'bg-profit/20 text-profit',
-    live: 'bg-profit/20 text-profit',
-    deprecated: 'bg-loss/20 text-loss',
-    archived: 'bg-text-secondary/20 text-text-secondary',
-    rejected: 'bg-loss/20 text-loss',
+const getStatusStyle = (status: string) => {
+  const styles: Record<string, string> = {
+    research: 'bg-[#F1ECFF] text-[#7959D6] border-[#D5C8F5]',
+    backtest: 'bg-[#EDF3FF] text-[#3F7CFF] border-[#A9C1FA]',
+    optimization: 'bg-[#EDF3FF] text-[#3F7CFF] border-[#A9C1FA]',
+    forward: 'bg-[#EDF3FF] text-[#3F7CFF] border-[#A9C1FA]',
+    approved: 'bg-[#E5F8F1] text-[#13AE81] border-[#A8E6CF]',
+    live: 'bg-[#E5F8F1] text-[#13AE81] border-[#A8E6CF]',
+    deprecated: 'bg-[#FFEDF0] text-[#E45D72] border-[#F0A6B2]',
+    archived: 'bg-[#F5F7FB] text-[#6B7A94] border-[#E5EBF3]',
+    rejected: 'bg-[#FFEDF0] text-[#E45D72] border-[#F0A6B2]',
   };
-  return colors[status] || 'bg-text-secondary/20 text-text-secondary';
+  return styles[status] || styles.archived;
 };
 
 export default function StrategyPage() {
@@ -66,22 +65,18 @@ export default function StrategyPage() {
   const [selectedStrategy, setSelectedStrategy] = useState<Strategy | null>(null);
   const [versions, setVersions] = useState<Version[]>([]);
 
-  // فرم استراتژی
   const [showStrategyForm, setShowStrategyForm] = useState(false);
   const [editingStrategyId, setEditingStrategyId] = useState<number | null>(null);
   const [strategyName, setStrategyName] = useState('');
   const [strategyDescription, setStrategyDescription] = useState('');
 
-  // فرم نسخه
   const [showVersionForm, setShowVersionForm] = useState(false);
   const [editingVersionId, setEditingVersionId] = useState<number | null>(null);
   const [versionName, setVersionName] = useState('');
   const [versionRules, setVersionRules] = useState('');
   const [versionStatus, setVersionStatus] = useState('research');
 
-  // فیلتر
   const [searchQuery, setSearchQuery] = useState('');
-
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -110,6 +105,7 @@ export default function StrategyPage() {
   const handleSelectStrategy = (strategy: Strategy) => {
     setSelectedStrategy(strategy);
     loadVersions(strategy.id);
+    setShowVersionForm(false);
   };
 
   // ═════════════════════════════════════════════
@@ -241,115 +237,152 @@ export default function StrategyPage() {
   );
 
   return (
-    <div>
+    <div className="space-y-6">
       {error && (
-        <div className="mb-4 bg-loss/10 border border-loss/30 text-loss p-3 rounded-xl">
+        <div className="bg-[#FFEDF0] border border-[#F0A6B2] text-[#E45D72] p-4 rounded-[14px] text-sm font-semibold shadow-sm">
           ❌ {error}
-          <button onClick={() => setError(null)} className="float-left text-xs">✕</button>
+          <button onClick={() => setError(null)} className="float-left text-xs font-bold">✕</button>
         </div>
       )}
       {successMessage && (
-        <div className="mb-4 bg-profit/10 border border-profit/30 text-profit p-3 rounded-xl">
+        <div className="bg-[#E5F8F1] border border-[#A8E6CF] text-[#13AE81] p-4 rounded-[14px] text-sm font-semibold shadow-sm">
           ✅ {successMessage}
         </div>
       )}
 
       {/* دکمه‌ها و جستجو */}
-      <div className="flex gap-3 mb-6 flex-wrap">
+      <div className="flex gap-3 flex-wrap items-center">
         <button
           onClick={() => handleOpenStrategyForm()}
-          className="bg-accent hover:bg-accent/80 text-white px-5 py-2 rounded-xl transition-all"
+          className="text-white px-6 py-3 rounded-[12px] text-sm font-extrabold transition-all shadow-[0_6px_16px_rgba(63,124,255,0.3)] hover:shadow-[0_10px_24px_rgba(63,124,255,0.4)] hover:-translate-y-0.5"
+          style={{ background: 'linear-gradient(135deg, #3F7CFF, #5B8DEF)' }}
         >
           ➕ استراتژی جدید
         </button>
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="🔍 جستجوی استراتژی..."
-          className="flex-1 min-w-[200px] bg-card border border-card-border rounded-xl px-4 py-2 text-text-primary focus:border-accent focus:outline-none"
-        />
+        <div className="flex-1 min-w-[220px] relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="🔍 جستجوی استراتژی..."
+            className="w-full bg-white border border-[#E5EBF3] rounded-[12px] px-5 py-3 text-[#1A2B47] text-sm font-medium shadow-sm focus:border-[#3F7CFF] focus:outline-none focus:ring-4 focus:ring-[#EDF3FF] transition-all"
+          />
+        </div>
       </div>
 
       {/* فرم استراتژی */}
       {showStrategyForm && (
-        <GlassCard className="mb-6">
-          <h3 className="text-text-primary font-bold mb-4">
-            {editingStrategyId ? '✏️ ویرایش استراتژی' : '➕ استراتژی جدید'}
-          </h3>
-          <div className="space-y-3">
+        <div className="bg-white border-2 border-[#3F7CFF] rounded-[22px] p-6 shadow-lg">
+          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-[#E5EBF3]">
+            <div className="w-11 h-11 rounded-[14px] flex items-center justify-center text-xl text-white"
+              style={{ background: 'linear-gradient(135deg, #3F7CFF, #5B8DEF)' }}>
+              {editingStrategyId ? '✏️' : '➕'}
+            </div>
             <div>
-              <label className="text-text-secondary text-sm block mb-1">نام استراتژی *</label>
+              <h3 className="text-lg font-extrabold text-[#1A2B47]">
+                {editingStrategyId ? 'ویرایش استراتژی' : 'ساخت استراتژی جدید'}
+              </h3>
+              <p className="text-[12px] text-[#6B7A94] mt-0.5">نام و توضیحات را وارد کنید</p>
+            </div>
+          </div>
+
+          <div className="space-y-5 mb-6">
+            <div>
+              <label className="text-[13px] text-[#1A2B47] font-bold block mb-2">
+                نام استراتژی <span className="text-[#E45D72]">*</span>
+              </label>
               <input
                 type="text"
                 value={strategyName}
                 onChange={(e) => setStrategyName(e.target.value)}
                 placeholder="مثلاً SP2L"
-                className="w-full bg-card border border-card-border rounded-xl px-4 py-3 text-text-primary focus:border-accent focus:outline-none"
+                className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[12px] px-5 py-3.5 text-[#1A2B47] text-sm font-semibold focus:border-[#3F7CFF] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#EDF3FF] transition-all"
               />
             </div>
             <div>
-              <label className="text-text-secondary text-sm block mb-1">توضیحات</label>
+              <label className="text-[13px] text-[#1A2B47] font-bold block mb-2">
+                توضیحات
+              </label>
               <textarea
                 value={strategyDescription}
                 onChange={(e) => setStrategyDescription(e.target.value)}
                 placeholder="توضیحات استراتژی..."
                 rows={3}
-                className="w-full bg-card border border-card-border rounded-xl px-4 py-3 text-text-primary focus:border-accent focus:outline-none resize-none"
+                className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[12px] px-5 py-3.5 text-[#1A2B47] text-sm font-medium focus:border-[#3F7CFF] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#EDF3FF] transition-all resize-none"
               />
             </div>
           </div>
-          <div className="flex gap-2 mt-4">
+
+          <div className="flex gap-3 pt-4 border-t border-[#E5EBF3]">
             <button
               onClick={handleSaveStrategy}
-              className="bg-profit hover:bg-profit/80 text-white px-6 py-3 rounded-xl transition-all"
+              className="text-white px-7 py-3 rounded-[12px] text-sm font-extrabold transition-all shadow-[0_6px_16px_rgba(19,174,129,0.3)] hover:shadow-[0_10px_24px_rgba(19,174,129,0.4)] hover:-translate-y-0.5"
+              style={{ background: 'linear-gradient(135deg, #13AE81, #4DD9A9)' }}
             >
               💾 ذخیره
             </button>
             <button
               onClick={() => setShowStrategyForm(false)}
-              className="bg-card-border hover:bg-card-border/80 text-text-secondary px-6 py-3 rounded-xl transition-all"
+              className="bg-white border-2 border-[#E5EBF3] hover:border-[#A9C1FA] text-[#6B7A94] hover:text-[#3F7CFF] px-7 py-3 rounded-[12px] text-sm font-bold transition-all"
             >
               ✕ لغو
             </button>
           </div>
-        </GlassCard>
+        </div>
       )}
 
       {/* فرم نسخه */}
       {showVersionForm && selectedStrategy && (
-        <GlassCard className="mb-6">
-          <h3 className="text-text-primary font-bold mb-4">
-            {editingVersionId ? '✏️ ویرایش نسخه' : `➕ نسخه‌ی جدید برای «${selectedStrategy.name}»`}
-          </h3>
-          <div className="space-y-3">
+        <div className="bg-white border-2 border-[#3F7CFF] rounded-[22px] p-6 shadow-lg">
+          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-[#E5EBF3]">
+            <div className="w-11 h-11 rounded-[14px] flex items-center justify-center text-xl text-white"
+              style={{ background: 'linear-gradient(135deg, #7959D6, #A78BFA)' }}>
+              {editingVersionId ? '✏️' : '➕'}
+            </div>
             <div>
-              <label className="text-text-secondary text-sm block mb-1">نام نسخه *</label>
+              <h3 className="text-lg font-extrabold text-[#1A2B47]">
+                {editingVersionId ? 'ویرایش نسخه' : `ساخت نسخه‌ی جدید برای «${selectedStrategy.name}»`}
+              </h3>
+              <p className="text-[12px] text-[#6B7A94] mt-0.5">نام، قوانین و وضعیت را وارد کنید</p>
+            </div>
+          </div>
+
+          <div className="space-y-5 mb-6">
+            <div>
+              <label className="text-[13px] text-[#1A2B47] font-bold block mb-2">
+                نام نسخه <span className="text-[#E45D72]">*</span>
+              </label>
               <input
                 type="text"
                 value={versionName}
                 onChange={(e) => setVersionName(e.target.value)}
                 placeholder="مثلاً SP2L_TP1.5"
-                className="w-full bg-card border border-card-border rounded-xl px-4 py-3 text-text-primary focus:border-accent focus:outline-none"
+                className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[12px] px-5 py-3.5 text-[#1A2B47] text-sm font-semibold focus:border-[#3F7CFF] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#EDF3FF] transition-all"
               />
             </div>
+
             <div>
-              <label className="text-text-secondary text-sm block mb-1">قوانین / توضیحات</label>
+              <label className="text-[13px] text-[#1A2B47] font-bold block mb-2">
+                قوانین / توضیحات
+              </label>
               <textarea
                 value={versionRules}
                 onChange={(e) => setVersionRules(e.target.value)}
                 placeholder="قوانین این نسخه..."
                 rows={4}
-                className="w-full bg-card border border-card-border rounded-xl px-4 py-3 text-text-primary focus:border-accent focus:outline-none resize-none"
+                className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[12px] px-5 py-3.5 text-[#1A2B47] text-sm font-medium focus:border-[#3F7CFF] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#EDF3FF] transition-all resize-none"
               />
             </div>
+
             {editingVersionId && (
               <div>
-                <label className="text-text-secondary text-sm block mb-1">وضعیت</label>
+                <label className="text-[13px] text-[#1A2B47] font-bold block mb-2">
+                  وضعیت
+                </label>
                 <select
                   value={versionStatus}
                   onChange={(e) => setVersionStatus(e.target.value)}
-                  className="w-full bg-card border border-card-border rounded-xl px-4 py-3 text-text-primary focus:border-accent focus:outline-none"
+                  className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[12px] px-5 py-3.5 text-[#1A2B47] text-sm font-semibold focus:border-[#3F7CFF] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#EDF3FF] transition-all cursor-pointer"
                 >
                   {STATUS_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
@@ -358,68 +391,77 @@ export default function StrategyPage() {
               </div>
             )}
           </div>
-          <div className="flex gap-2 mt-4">
+
+          <div className="flex gap-3 pt-4 border-t border-[#E5EBF3]">
             <button
               onClick={handleSaveVersion}
-              className="bg-profit hover:bg-profit/80 text-white px-6 py-3 rounded-xl transition-all"
+              className="text-white px-7 py-3 rounded-[12px] text-sm font-extrabold transition-all shadow-[0_6px_16px_rgba(19,174,129,0.3)] hover:shadow-[0_10px_24px_rgba(19,174,129,0.4)] hover:-translate-y-0.5"
+              style={{ background: 'linear-gradient(135deg, #13AE81, #4DD9A9)' }}
             >
               💾 ذخیره
             </button>
             <button
               onClick={() => setShowVersionForm(false)}
-              className="bg-card-border hover:bg-card-border/80 text-text-secondary px-6 py-3 rounded-xl transition-all"
+              className="bg-white border-2 border-[#E5EBF3] hover:border-[#A9C1FA] text-[#6B7A94] hover:text-[#3F7CFF] px-7 py-3 rounded-[12px] text-sm font-bold transition-all"
             >
               ✕ لغو
             </button>
           </div>
-        </GlassCard>
+        </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* لیست استراتژی‌ها */}
-        <div>
-          <GlassCard>
-            <h3 className="text-text-primary font-bold mb-4">
-              📚 استراتژی‌ها ({filteredStrategies.length})
-            </h3>
+        <div className="bg-white border border-[#E5EBF3] rounded-[22px] p-6 shadow-md">
+          <div className="flex items-center gap-3 mb-5 pb-4 border-b border-[#E5EBF3]">
+            <div className="w-11 h-11 rounded-[14px] bg-[#EDF3FF] flex items-center justify-center text-xl">
+              📚
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-[#1A2B47]">استراتژی‌ها</h3>
+              <p className="text-[12px] text-[#6B7A94] mt-0.5">{filteredStrategies.length} استراتژی</p>
+            </div>
+          </div>
 
-            {filteredStrategies.length === 0 ? (
-              <div className="text-text-secondary text-sm text-center py-8">
-                {searchQuery ? 'نتیجه‌ای یافت نشد' : 'هنوز استراتژی‌ای نساخته‌اید'}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {filteredStrategies.map((strategy) => (
+          {filteredStrategies.length === 0 ? (
+            <div className="text-[#9AA8BF] text-sm text-center py-12">
+              {searchQuery ? 'نتیجه‌ای یافت نشد' : 'هنوز استراتژی‌ای نساخته‌اید'}
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {filteredStrategies.map((strategy) => {
+                const isSelected = selectedStrategy?.id === strategy.id;
+                return (
                   <div
                     key={strategy.id}
-                    className={`p-3 rounded-xl border transition-all cursor-pointer ${
-                      selectedStrategy?.id === strategy.id
-                        ? 'bg-accent/20 border-accent'
-                        : 'bg-card border-card-border hover:border-accent/30'
-                    }`}
                     onClick={() => handleSelectStrategy(strategy)}
+                    className={`p-4 rounded-[14px] border-2 cursor-pointer transition-all ${
+                      isSelected
+                        ? 'bg-[#EDF3FF] border-[#3F7CFF] shadow-[0_4px_12px_rgba(63,124,255,0.15)]'
+                        : 'bg-white border-[#E5EBF3] hover:border-[#A9C1FA] hover:bg-[#F8FAFF] hover:shadow-sm'
+                    }`}
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <div className="text-text-primary font-bold text-sm">
+                        <div className="text-[15px] font-extrabold text-[#1A2B47] flex items-center gap-2">
                           🎯 {strategy.name}
                         </div>
                         {strategy.description && (
-                          <div className="text-text-secondary text-xs mt-1">
+                          <div className="text-[12px] text-[#6B7A94] mt-1.5 font-medium">
                             {strategy.description}
                           </div>
                         )}
-                        <div className="text-text-secondary text-xs mt-1">
+                        <div className="text-[11px] text-[#9AA8BF] mt-2 font-semibold">
                           {strategy.versions_count} نسخه
                         </div>
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 shrink-0">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleOpenStrategyForm(strategy);
                           }}
-                          className="text-accent hover:bg-accent/20 p-1.5 rounded-lg text-xs"
+                          className="text-[#3F7CFF] hover:bg-[#EDF3FF] p-2 rounded-[8px] text-sm transition-all"
                           title="ویرایش"
                         >
                           ✏️
@@ -429,7 +471,7 @@ export default function StrategyPage() {
                             e.stopPropagation();
                             handleDeleteStrategy(strategy);
                           }}
-                          className="text-loss hover:bg-loss/20 p-1.5 rounded-lg text-xs"
+                          className="text-[#E45D72] hover:bg-[#FFEDF0] p-2 rounded-[8px] text-sm transition-all"
                           title="حذف"
                         >
                           🗑️
@@ -437,57 +479,64 @@ export default function StrategyPage() {
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </GlassCard>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* لیست نسخه‌ها */}
-        <div>
+        <div className="bg-white border border-[#E5EBF3] rounded-[22px] p-6 shadow-md">
           {selectedStrategy ? (
-            <GlassCard>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-text-primary font-bold">
-                  🔖 نسخه‌های «{selectedStrategy.name}»
-                </h3>
+            <>
+              <div className="flex items-center justify-between gap-3 mb-5 pb-4 border-b border-[#E5EBF3]">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-[14px] bg-[#F1ECFF] flex items-center justify-center text-xl">
+                    🔖
+                  </div>
+                  <div>
+                    <h3 className="text-base font-extrabold text-[#1A2B47]">نسخه‌های «{selectedStrategy.name}»</h3>
+                    <p className="text-[12px] text-[#6B7A94] mt-0.5">{versions.length} نسخه</p>
+                  </div>
+                </div>
                 <button
                   onClick={() => handleOpenVersionForm()}
-                  className="bg-accent hover:bg-accent/80 text-white px-3 py-1.5 rounded-lg text-xs"
+                  className="text-white px-4 py-2 rounded-[10px] text-[12px] font-extrabold transition-all shadow-[0_4px_12px_rgba(121,89,214,0.3)] hover:shadow-[0_6px_16px_rgba(121,89,214,0.4)]"
+                  style={{ background: 'linear-gradient(135deg, #7959D6, #A78BFA)' }}
                 >
-                  ➕ نسخه‌ی جدید
+                  ➕ نسخه جدید
                 </button>
               </div>
 
               {versions.length === 0 ? (
-                <div className="text-text-secondary text-sm text-center py-8">
+                <div className="text-[#9AA8BF] text-sm text-center py-12">
                   هنوز نسخه‌ای نساخته‌اید
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {versions.map((version) => (
                     <div
                       key={version.id}
-                      className="bg-card border border-card-border rounded-xl p-3 hover:border-accent/30 transition-all"
+                      className="bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[14px] p-4 hover:border-[#A9C1FA] hover:bg-white hover:shadow-sm transition-all"
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex-1">
-                          <div className="text-text-primary font-bold text-sm">
+                          <div className="text-[15px] font-extrabold text-[#1A2B47]">
                             {version.version_name}
                           </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(version.status)}`}>
+                          <div className="flex items-center gap-2 mt-2 flex-wrap">
+                            <span className={`text-[11px] font-bold px-3 py-1 rounded-full border ${getStatusStyle(version.status)}`}>
                               {getStatusLabel(version.status)}
                             </span>
-                            <span className="text-text-secondary text-xs">
+                            <span className="text-[11px] text-[#6B7A94] font-semibold">
                               {version.trades_count} معامله
                             </span>
                           </div>
                         </div>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 shrink-0">
                           <button
                             onClick={() => handleOpenVersionForm(version)}
-                            className="text-accent hover:bg-accent/20 p-1.5 rounded-lg text-xs"
+                            className="text-[#3F7CFF] hover:bg-[#EDF3FF] p-2 rounded-[8px] text-sm transition-all"
                             title="ویرایش"
                           >
                             ✏️
@@ -495,7 +544,7 @@ export default function StrategyPage() {
                           <button
                             onClick={() => handleDeleteVersion(version)}
                             disabled={version.trades_count > 0}
-                            className="text-loss hover:bg-loss/20 p-1.5 rounded-lg text-xs disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="text-[#E45D72] hover:bg-[#FFEDF0] p-2 rounded-[8px] text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                             title={version.trades_count > 0 ? 'این نسخه معامله دارد' : 'حذف'}
                           >
                             🗑️
@@ -504,23 +553,21 @@ export default function StrategyPage() {
                       </div>
 
                       {version.rules_note && (
-                        <div className="text-text-secondary text-xs bg-background/50 rounded-lg p-2 mt-2">
-                          {version.rules_note}
+                        <div className="text-[12px] text-[#6B7A94] bg-white border border-[#E5EBF3] rounded-[10px] p-3 mt-3 font-medium">
+                          📝 {version.rules_note}
                         </div>
                       )}
                     </div>
                   ))}
                 </div>
               )}
-            </GlassCard>
+            </>
           ) : (
-            <GlassCard>
-              <div className="text-center py-12 text-text-secondary">
-                <div className="text-4xl mb-4">🎯</div>
-                <div>یک استراتژی را از لیست انتخاب کنید</div>
-                <div className="text-xs mt-2">تا نسخه‌های آن را ببینید</div>
-              </div>
-            </GlassCard>
+            <div className="text-center py-16">
+              <div className="text-6xl mb-4">🎯</div>
+              <div className="text-[15px] font-bold text-[#1A2B47]">یک استراتژی را از لیست انتخاب کنید</div>
+              <div className="text-[12px] text-[#9AA8BF] mt-2">تا نسخه‌های آن را ببینید</div>
+            </div>
           )}
         </div>
       </div>

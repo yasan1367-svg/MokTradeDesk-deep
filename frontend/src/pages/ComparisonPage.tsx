@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import GlassCard from '../components/GlassCard';
 import {
   getAllVersions,
   getStrategies,
@@ -85,41 +84,52 @@ export default function ComparisonPage() {
     return true;
   });
 
-  const getCellColor = (item: any, allItems: any[], metric: string, higherIsBetter: boolean = true) => {
-    if (allItems.length < 2) return 'text-text-primary';
+  const getCellStyle = (item: any, allItems: any[], metric: string, higherIsBetter: boolean = true) => {
+    if (allItems.length < 2) return 'text-[#1A2B47]';
     const values = allItems.map((i: any) => i[metric]);
     const maxVal = Math.max(...values);
     const minVal = Math.min(...values);
     const val = item[metric];
     if (higherIsBetter) {
-      if (val === maxVal) return 'text-profit font-bold';
-      if (val === minVal) return 'text-loss';
+      if (val === maxVal) return 'text-[#13AE81] font-extrabold';
+      if (val === minVal) return 'text-[#E45D72] font-bold';
     } else {
-      if (val === minVal) return 'text-profit font-bold';
-      if (val === maxVal) return 'text-loss';
+      if (val === minVal) return 'text-[#13AE81] font-extrabold';
+      if (val === maxVal) return 'text-[#E45D72] font-bold';
     }
-    return 'text-text-primary';
+    return 'text-[#1A2B47] font-semibold';
   };
 
   return (
-    <div>
+    <div className="space-y-6">
       {error && (
-        <div className="mb-4 bg-loss/10 border border-loss/30 text-loss p-3 rounded-xl">
+        <div className="bg-[#FFEDF0] border border-[#F0A6B2] text-[#E45D72] p-4 rounded-[14px] text-sm font-semibold shadow-sm">
           ❌ {error}
         </div>
       )}
 
-      {/* بخش انتخاب */}
-      <GlassCard className="mb-6">
-        <h2 className="text-xl font-bold mb-4">📊 انتخاب نسخه‌ها برای مقایسه</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+      {/* ═══════════════════════════════════════════
+          بخش انتخاب
+      ═══════════════════════════════════════════ */}
+      <div className="bg-white border border-[#E5EBF3] rounded-[22px] p-6 shadow-md">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-11 h-11 rounded-[14px] bg-[#EDF3FF] flex items-center justify-center text-xl shadow-[0_4px_12px_rgba(63,124,255,0.12)]">
+            ⚖️
+          </div>
           <div>
-            <label className="text-text-secondary text-xs block mb-1">استراتژی</label>
+            <h2 className="text-lg font-extrabold text-[#1A2B47]">انتخاب نسخه‌ها برای مقایسه</h2>
+            <p className="text-[12px] text-[#6B7A94] mt-0.5">حداقل ۲ و حداکثر ۵ نسخه را انتخاب کنید</p>
+          </div>
+        </div>
+
+        {/* فیلترها */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
+          <div>
+            <label className="text-[12px] text-[#6B7A94] font-semibold block mb-1.5">استراتژی</label>
             <select
               value={filterStrategy || ''}
               onChange={(e) => setFilterStrategy(e.target.value ? Number(e.target.value) : null)}
-              className="w-full bg-card border border-card-border rounded-xl px-4 py-2 text-text-primary focus:border-accent focus:outline-none"
+              className="w-full bg-[#F8FAFF] border border-[#E5EBF3] rounded-[10px] px-4 py-2.5 text-[#1A2B47] text-sm font-medium focus:border-[#3F7CFF] focus:outline-none focus:ring-2 focus:ring-[#EDF3FF]"
             >
               <option value="">همه‌ی استراتژی‌ها</option>
               {strategies.map((s) => (
@@ -128,145 +138,162 @@ export default function ComparisonPage() {
             </select>
           </div>
           <div className="md:col-span-2">
-            <label className="text-text-secondary text-xs block mb-1">جستجو</label>
+            <label className="text-[12px] text-[#6B7A94] font-semibold block mb-1.5">جستجو</label>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="🔍 جستجوی نام نسخه یا استراتژی..."
-              className="w-full bg-card border border-card-border rounded-xl px-4 py-2 text-text-primary focus:border-accent focus:outline-none"
+              className="w-full bg-[#F8FAFF] border border-[#E5EBF3] rounded-[10px] px-4 py-2.5 text-[#1A2B47] text-sm font-medium focus:border-[#3F7CFF] focus:outline-none focus:ring-2 focus:ring-[#EDF3FF]"
             />
           </div>
         </div>
 
         {/* لیست نسخه‌ها */}
-        <div className="max-h-64 overflow-y-auto border border-card-border rounded-xl p-2 mb-4">
+        <div className="max-h-72 overflow-y-auto border border-[#E5EBF3] rounded-[14px] p-2 mb-5 bg-[#F8FAFF]">
           {filteredVersions.length === 0 ? (
-            <div className="text-text-secondary text-sm text-center py-4">
-              نسخه‌ای یافت نشد
-            </div>
+            <div className="text-[#9AA8BF] text-sm text-center py-8">نسخه‌ای یافت نشد</div>
           ) : (
-            <div className="space-y-1">
-              {filteredVersions.map((v) => (
-                <label
-                  key={v.id}
-                  className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all ${
-                    selectedIds.includes(v.id)
-                      ? 'bg-accent/20 border border-accent'
-                      : 'hover:bg-card/50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(v.id)}
-                      onChange={() => toggleVersion(v.id)}
-                      className="w-4 h-4 accent-accent"
-                    />
-                    <div>
-                      <div className="text-text-primary text-sm font-bold">
-                        {v.strategy_name} / {v.version_name}
-                      </div>
-                      <div className="text-text-secondary text-xs">
-                        {v.trades_count} معامله • وضعیت: {v.status}
+            <div className="space-y-1.5">
+              {filteredVersions.map((v) => {
+                const isSelected = selectedIds.includes(v.id);
+                return (
+                  <label
+                    key={v.id}
+                    className={`flex items-center justify-between p-3 rounded-[12px] cursor-pointer transition-all ${
+                      isSelected
+                        ? 'bg-[#EDF3FF] border-2 border-[#3F7CFF] shadow-[0_4px_12px_rgba(63,124,255,0.15)]'
+                        : 'bg-white border border-[#E5EBF3] hover:border-[#A9C1FA] hover:shadow-sm'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleVersion(v.id)}
+                        className="w-5 h-5 accent-[#3F7CFF] cursor-pointer"
+                      />
+                      <div>
+                        <div className="text-[14px] font-bold text-[#1A2B47]">
+                          {v.strategy_name} / {v.version_name}
+                        </div>
+                        <div className="text-[11px] text-[#6B7A94] mt-0.5">
+                          {v.trades_count} معامله • وضعیت: {v.status}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </label>
-              ))}
+                    {isSelected && (
+                      <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-[#3F7CFF] text-white">
+                        انتخاب‌شده
+                      </span>
+                    )}
+                  </label>
+                );
+              })}
             </div>
           )}
         </div>
 
-        <div className="flex justify-between items-center">
-          <div className="text-text-secondary text-sm">
-            انتخاب‌شده: <span className="text-accent font-bold">{selectedIds.length}</span> از ۵
+        <div className="flex justify-between items-center flex-wrap gap-3">
+          <div className="text-[13px] text-[#6B7A94] font-medium">
+            انتخاب‌شده: <span className="text-[#3F7CFF] font-extrabold text-base">{selectedIds.length}</span> از ۵
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => setSelectedIds([])}
-              className="bg-card-border hover:bg-card-border/80 text-text-secondary px-4 py-2 rounded-xl text-sm"
+              className="bg-white border border-[#E5EBF3] hover:border-[#A9C1FA] text-[#6B7A94] hover:text-[#3F7CFF] px-5 py-2.5 rounded-[10px] text-sm font-bold transition-all"
             >
-              پاک کردن
+              ✕ پاک کردن
             </button>
             <button
               onClick={handleCompare}
               disabled={loading || selectedIds.length < 2}
-              className="bg-accent hover:bg-accent/80 text-white px-6 py-2 rounded-xl transition-all disabled:opacity-50"
+              className="text-white px-7 py-2.5 rounded-[10px] text-sm font-extrabold transition-all shadow-[0_6px_16px_rgba(63,124,255,0.3)] hover:shadow-[0_10px_24px_rgba(63,124,255,0.4)] hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+              style={{ background: 'linear-gradient(135deg, #3F7CFF, #5B8DEF)' }}
             >
               {loading ? '⏳ در حال مقایسه...' : '🚀 مقایسه کن'}
             </button>
           </div>
         </div>
-      </GlassCard>
+      </div>
 
-      {/* نتیجه‌ی مقایسه */}
+      {/* ═══════════════════════════════════════════
+          نتیجه
+      ═══════════════════════════════════════════ */}
       {comparison && (
         <>
           {/* جدول مقایسه */}
-          <GlassCard className="mb-6">
-            <h3 className="text-text-primary font-bold mb-4">
-              📋 جدول مقایسه ({comparison.items.length} نسخه)
-            </h3>
+          <div className="bg-white border border-[#E5EBF3] rounded-[22px] p-6 shadow-md">
+            <div className="flex items-center gap-3 mb-5 pb-4 border-b border-[#E5EBF3]">
+              <div className="w-11 h-11 rounded-[14px] bg-[#EDF3FF] flex items-center justify-center text-xl">
+                📋
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-[#1A2B47]">جدول مقایسه</h3>
+                <p className="text-[12px] text-[#6B7A94] mt-0.5">{comparison.items.length} نسخه</p>
+              </div>
+            </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-[14px] border border-[#E5EBF3]">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-text-secondary border-b border-card-border">
-                    <th className="text-right py-3">معیار</th>
+                  <tr className="bg-[#F5F7FB]">
+                    <th className="text-right py-4 px-5 text-[12px] text-[#6B7A94] font-extrabold uppercase tracking-wider rounded-r-[14px]">
+                      معیار
+                    </th>
                     {comparison.items.map((item: any) => (
-                      <th key={item.version_id} className="text-right py-3">
-                        <div className="font-bold text-text-primary">{item.version_name}</div>
-                        <div className="text-xs">{item.strategy_name}</div>
+                      <th key={item.version_id} className="text-right py-4 px-5 rounded-l-[14px]">
+                        <div className="font-extrabold text-[14px] text-[#1A2B47]">{item.version_name}</div>
+                        <div className="text-[11px] text-[#6B7A94] font-medium mt-0.5">{item.strategy_name}</div>
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-card-border/50">
-                    <td className="py-3 text-text-secondary">تعداد معاملات</td>
+                  <tr className="border-b border-[#E5EBF3] hover:bg-[#F8FAFF] transition-colors">
+                    <td className="py-4 px-5 text-[13px] text-[#6B7A94] font-semibold">تعداد معاملات</td>
                     {comparison.items.map((item: any) => (
-                      <td key={item.version_id} className="py-3 text-text-primary">
+                      <td key={item.version_id} className="py-4 px-5 text-[14px] font-bold text-[#1A2B47]">
                         {item.total_trades}
                       </td>
                     ))}
                   </tr>
-                  <tr className="border-b border-card-border/50">
-                    <td className="py-3 text-text-secondary">🥇 نرخ برد</td>
+                  <tr className="border-b border-[#E5EBF3] hover:bg-[#F8FAFF] transition-colors">
+                    <td className="py-4 px-5 text-[13px] text-[#6B7A94] font-semibold">🥇 نرخ برد</td>
                     {comparison.items.map((item: any) => (
-                      <td key={item.version_id} className={`py-3 ${getCellColor(item, comparison.items, 'win_rate')}`}>
+                      <td key={item.version_id} className={`py-4 px-5 text-[14px] ${getCellStyle(item, comparison.items, 'win_rate')}`}>
                         {item.win_rate}٪
                       </td>
                     ))}
                   </tr>
-                  <tr className="border-b border-card-border/50">
-                    <td className="py-3 text-text-secondary">💰 سود خالص</td>
+                  <tr className="border-b border-[#E5EBF3] hover:bg-[#F8FAFF] transition-colors">
+                    <td className="py-4 px-5 text-[13px] text-[#6B7A94] font-semibold">💰 سود خالص</td>
                     {comparison.items.map((item: any) => (
-                      <td key={item.version_id} className={`py-3 ${getCellColor(item, comparison.items, 'net_pnl')}`}>
+                      <td key={item.version_id} className={`py-4 px-5 text-[14px] ${getCellStyle(item, comparison.items, 'net_pnl')}`}>
                         {item.net_pnl >= 0 ? '+' : ''}{item.net_pnl} $
                       </td>
                     ))}
                   </tr>
-                  <tr className="border-b border-card-border/50">
-                    <td className="py-3 text-text-secondary">🏆 فاکتور سود</td>
+                  <tr className="border-b border-[#E5EBF3] hover:bg-[#F8FAFF] transition-colors">
+                    <td className="py-4 px-5 text-[13px] text-[#6B7A94] font-semibold">🏆 فاکتور سود</td>
                     {comparison.items.map((item: any) => (
-                      <td key={item.version_id} className={`py-3 ${getCellColor(item, comparison.items, 'profit_factor')}`}>
+                      <td key={item.version_id} className={`py-4 px-5 text-[14px] ${getCellStyle(item, comparison.items, 'profit_factor')}`}>
                         {item.profit_factor}
                       </td>
                     ))}
                   </tr>
-                  <tr className="border-b border-card-border/50">
-                    <td className="py-3 text-text-secondary">🛡️ حداکثر DD</td>
+                  <tr className="border-b border-[#E5EBF3] hover:bg-[#F8FAFF] transition-colors">
+                    <td className="py-4 px-5 text-[13px] text-[#6B7A94] font-semibold">🛡️ حداکثر DD</td>
                     {comparison.items.map((item: any) => (
-                      <td key={item.version_id} className={`py-3 ${getCellColor(item, comparison.items, 'max_dd', false)}`}>
+                      <td key={item.version_id} className={`py-4 px-5 text-[14px] ${getCellStyle(item, comparison.items, 'max_dd', false)}`}>
                         -{item.max_dd} $
                       </td>
                     ))}
                   </tr>
-                  <tr className="border-b border-card-border/50">
-                    <td className="py-3 text-text-secondary font-bold">⭐ امتیاز</td>
+                  <tr className="bg-[#EDF3FF]/50">
+                    <td className="py-4 px-5 text-[13px] text-[#1A2B47] font-extrabold">⭐ امتیاز کل</td>
                     {comparison.items.map((item: any) => (
-                      <td key={item.version_id} className={`py-3 font-bold ${getCellColor(item, comparison.items, 'score')}`}>
+                      <td key={item.version_id} className={`py-4 px-5 text-[16px] ${getCellStyle(item, comparison.items, 'score')}`}>
                         {item.score}
                       </td>
                     ))}
@@ -274,62 +301,101 @@ export default function ComparisonPage() {
                 </tbody>
               </table>
             </div>
-          </GlassCard>
+          </div>
 
           {/* پیشنهاد هوشمند */}
-          <GlassCard className="mb-6">
-            <h3 className="text-text-primary font-bold mb-4">💡 پیشنهاد هوشمند</h3>
-
-            <div className="bg-gradient-to-l from-accent/10 to-profit/10 border border-accent/30 rounded-xl p-5 mb-4">
-              <div className="text-xl font-bold text-text-primary mb-1">
-                🏆 {comparison.best_version_name}
+          <div className="bg-white border border-[#E5EBF3] rounded-[22px] p-6 shadow-md">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-11 h-11 rounded-[14px] bg-[#FFF5DB] flex items-center justify-center text-xl">
+                💡
               </div>
-              <div className="text-accent font-bold mb-3">
-                امتیاز: {comparison.best_score} از ۱۰۰
-              </div>
-              <div className="text-text-secondary text-sm">
-                {comparison.recommendation}
+              <div>
+                <h3 className="text-base font-extrabold text-[#1A2B47]">پیشنهاد هوشمند</h3>
+                <p className="text-[12px] text-[#6B7A94] mt-0.5">تحلیل خودکار بهترین نسخه</p>
               </div>
             </div>
 
+            <div
+              className="rounded-[18px] p-6 mb-5 border border-[#A9C1FA] relative overflow-hidden"
+              style={{ background: 'linear-gradient(135deg, #EDF3FF 0%, #F0F6FF 100%)' }}
+            >
+              <div className="absolute top-0 right-0 left-0 h-1" style={{ background: 'linear-gradient(90deg, #3F7CFF, #7959D6)' }} />
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div>
+                  <div className="text-[22px] font-extrabold text-[#1A2B47] mb-1">
+                    🏆 {comparison.best_version_name}
+                  </div>
+                  <div className="text-[14px] text-[#6B7A94] font-medium">
+                    {comparison.recommendation}
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-[11px] text-[#6B7A94] font-semibold mb-1">امتیاز کل</div>
+                  <div className="text-[36px] font-extrabold accent-gradient-text leading-none">
+                    {comparison.best_score}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* دلایل */}
             {comparison.reasons && comparison.reasons.length > 0 && (
               <div>
-                <h4 className="text-text-primary font-bold mb-3">📊 دلایل برتری:</h4>
-                <div className="space-y-2">
+                <h4 className="text-[14px] font-extrabold text-[#1A2B47] mb-3">📊 دلایل برتری:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {comparison.reasons.map((reason: any, idx: number) => (
-                    <div key={idx} className="flex items-start gap-3 bg-card border border-card-border rounded-xl p-3">
-                      <span className="text-xl">{reason.icon}</span>
-                      <span className="text-text-primary text-sm">{reason.text}</span>
+                    <div
+                      key={idx}
+                      className="flex items-start gap-3 bg-[#F8FAFF] border border-[#E5EBF3] rounded-[14px] p-4 hover:border-[#A9C1FA] hover:shadow-sm transition-all"
+                    >
+                      <div className="w-10 h-10 rounded-[12px] bg-white flex items-center justify-center text-xl shadow-sm shrink-0">
+                        {reason.icon}
+                      </div>
+                      <span className="text-[13px] text-[#1A2B47] font-medium leading-relaxed pt-2">{reason.text}</span>
                     </div>
                   ))}
                 </div>
               </div>
             )}
-          </GlassCard>
+          </div>
 
           {/* بهترین نسخه برای هر نماد */}
           {comparison.symbol_bests && comparison.symbol_bests.length > 0 && (
-            <GlassCard className="mb-6">
-              <h3 className="text-text-primary font-bold mb-4">🥇 بهترین نسخه برای هر نماد</h3>
+            <div className="bg-white border border-[#E5EBF3] rounded-[22px] p-6 shadow-md">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-11 h-11 rounded-[14px] bg-[#E5F8F1] flex items-center justify-center text-xl">
+                  🥇
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-[#1A2B47]">بهترین نسخه برای هر نماد</h3>
+                  <p className="text-[12px] text-[#6B7A94] mt-0.5">بر اساس امتیاز کلی</p>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {comparison.symbol_bests.map((sb: any, idx: number) => (
-                  <div key={idx} className="bg-card border border-card-border rounded-xl p-4">
-                    <div className="text-text-primary font-bold mb-2">{sb.symbol_label}</div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-2xl">🥇</span>
+                  <div
+                    key={idx}
+                    className="bg-gradient-to-bl from-[#E5F8F1] to-[#F0FDF9] border border-[#A8E6CF] rounded-[18px] p-5 hover:shadow-md transition-all"
+                  >
+                    <div className="text-[15px] font-extrabold text-[#1A2B47] mb-4">{sb.symbol_label}</div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 rounded-[14px] bg-white flex items-center justify-center text-2xl shadow-sm">
+                        🥇
+                      </div>
                       <div>
-                        <div className="text-profit font-bold">{sb.best_version_name}</div>
-                        <div className="text-text-secondary text-xs">{sb.best_strategy}</div>
+                        <div className="text-[15px] font-extrabold text-[#13AE81]">{sb.best_version_name}</div>
+                        <div className="text-[11px] text-[#6B7A94] font-medium mt-0.5">{sb.best_strategy}</div>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div>
-                        <div className="text-text-secondary">نرخ برد</div>
-                        <div className="text-text-primary font-bold">{sb.win_rate}٪</div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-white/60 rounded-[10px] p-3">
+                        <div className="text-[10px] text-[#6B7A94] font-semibold mb-1">نرخ برد</div>
+                        <div className="text-[16px] font-extrabold text-[#1A2B47]">{sb.win_rate}٪</div>
                       </div>
-                      <div>
-                        <div className="text-text-secondary">سود خالص</div>
-                        <div className={`font-bold ${sb.net_pnl >= 0 ? 'text-profit' : 'text-loss'}`}>
+                      <div className="bg-white/60 rounded-[10px] p-3">
+                        <div className="text-[10px] text-[#6B7A94] font-semibold mb-1">سود خالص</div>
+                        <div className={`text-[16px] font-extrabold ${sb.net_pnl >= 0 ? 'text-[#13AE81]' : 'text-[#E45D72]'}`}>
                           {sb.net_pnl >= 0 ? '+' : ''}{sb.net_pnl} $
                         </div>
                       </div>
@@ -337,59 +403,77 @@ export default function ComparisonPage() {
                   </div>
                 ))}
               </div>
-            </GlassCard>
+            </div>
           )}
 
           {/* مقایسه‌ی تفکیکی */}
           {comparison.detail_bests && (
-            <GlassCard>
-              <h3 className="text-text-primary font-bold mb-4">📈 بهترین نسخه در هر بخش</h3>
+            <div className="bg-white border border-[#E5EBF3] rounded-[22px] p-6 shadow-md">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-11 h-11 rounded-[14px] bg-[#F1ECFF] flex items-center justify-center text-xl">
+                  📈
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-[#1A2B47]">بهترین نسخه در هر بخش</h3>
+                  <p className="text-[12px] text-[#6B7A94] mt-0.5">تفکیک‌شده بر اساس سشن، روز، ساعت و بازه</p>
+                </div>
+              </div>
 
-              <div className="flex gap-2 mb-4 flex-wrap">
+              {/* تب‌ها */}
+              <div className="flex gap-2 mb-5 flex-wrap">
                 {[
                   { key: 'session', label: '🌍 سشن‌ها' },
                   { key: 'weekday', label: '📅 روزهای هفته' },
                   { key: 'hour', label: '🕐 ساعت‌ها' },
                   { key: 'custom', label: '⏰ بازه‌های سفارشی' },
-                ].map((tab) => (
-                  <button
-                    key={tab.key}
-                    onClick={() => setActiveDetailTab(tab.key as any)}
-                    className={`px-4 py-2 rounded-xl text-sm transition-all ${
-                      activeDetailTab === tab.key
-                        ? 'bg-accent text-white'
-                        : 'bg-card border border-card-border text-text-secondary hover:border-accent/30'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+                ].map((tab) => {
+                  const isActive = activeDetailTab === tab.key;
+                  return (
+                    <button
+                      key={tab.key}
+                      onClick={() => setActiveDetailTab(tab.key as any)}
+                      className={`px-5 py-2.5 rounded-[10px] text-[13px] font-bold transition-all ${
+                        isActive
+                          ? 'text-white shadow-[0_6px_16px_rgba(63,124,255,0.3)]'
+                          : 'bg-[#F8FAFF] border border-[#E5EBF3] text-[#6B7A94] hover:border-[#A9C1FA] hover:text-[#3F7CFF]'
+                      }`}
+                      style={isActive ? { background: 'linear-gradient(135deg, #3F7CFF, #5B8DEF)' } : {}}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {comparison.detail_bests[activeDetailTab === 'custom' ? 'custom_interval' : activeDetailTab]?.map(
                   (detail: any, idx: number) => (
-                    <div key={idx} className="bg-card border border-card-border rounded-xl p-3 flex justify-between items-center flex-wrap gap-2">
-                      <div className="text-text-primary font-bold text-sm">{detail.name}</div>
-                      <div className="flex items-center gap-4 text-xs">
+                    <div
+                      key={idx}
+                      className="bg-[#F8FAFF] border border-[#E5EBF3] rounded-[14px] p-4 flex justify-between items-center flex-wrap gap-4 hover:border-[#A9C1FA] hover:bg-white hover:shadow-sm transition-all"
+                    >
+                      <div className="text-[14px] font-extrabold text-[#1A2B47] min-w-[140px]">
+                        {detail.name}
+                      </div>
+                      <div className="flex items-center gap-6 flex-wrap">
                         <div className="text-center">
-                          <div className="text-text-secondary">نسخه</div>
-                          <div className="text-profit font-bold">{detail.best.version_name}</div>
+                          <div className="text-[10px] text-[#6B7A94] font-bold mb-1">نسخه برتر</div>
+                          <div className="text-[14px] font-extrabold text-[#13AE81]">{detail.best.version_name}</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-text-secondary">نرخ برد</div>
-                          <div className="text-text-primary font-bold">{detail.best.win_rate}٪</div>
+                          <div className="text-[10px] text-[#6B7A94] font-bold mb-1">نرخ برد</div>
+                          <div className="text-[14px] font-extrabold text-[#1A2B47]">{detail.best.win_rate}٪</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-text-secondary">سود</div>
-                          <div className={`font-bold ${detail.best.net_pnl >= 0 ? 'text-profit' : 'text-loss'}`}>
+                          <div className="text-[10px] text-[#6B7A94] font-bold mb-1">سود</div>
+                          <div className={`text-[14px] font-extrabold ${detail.best.net_pnl >= 0 ? 'text-[#13AE81]' : 'text-[#E45D72]'}`}>
                             {detail.best.net_pnl >= 0 ? '+' : ''}{detail.best.net_pnl} $
                           </div>
                         </div>
                         {detail.best.total_trades !== undefined && (
                           <div className="text-center">
-                            <div className="text-text-secondary">معاملات</div>
-                            <div className="text-text-primary">{detail.best.total_trades}</div>
+                            <div className="text-[10px] text-[#6B7A94] font-bold mb-1">معاملات</div>
+                            <div className="text-[14px] font-extrabold text-[#1A2B47]">{detail.best.total_trades}</div>
                           </div>
                         )}
                       </div>
@@ -397,12 +481,12 @@ export default function ComparisonPage() {
                   )
                 )}
                 {comparison.detail_bests[activeDetailTab === 'custom' ? 'custom_interval' : activeDetailTab]?.length === 0 && (
-                  <div className="text-text-secondary text-sm text-center py-4">
+                  <div className="text-[#9AA8BF] text-sm text-center py-8">
                     داده‌ای برای این بخش وجود ندارد
                   </div>
                 )}
               </div>
-            </GlassCard>
+            </div>
           )}
         </>
       )}

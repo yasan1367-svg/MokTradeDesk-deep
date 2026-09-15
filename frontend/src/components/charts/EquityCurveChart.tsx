@@ -48,16 +48,16 @@ export default function EquityCurveChart({ trades, initialBalance = 0, height = 
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#2A2A3A" />
         <XAxis
-          dataKey="index"
-          stroke="#8888A0"
-          style={{ fontSize: '10px' }}
-          tick={{ fill: '#8888A0' }}
-        />
-        <YAxis
-          stroke="#8888A0"
-          style={{ fontSize: '10px' }}
-          tick={{ fill: '#8888A0' }}
-        />
+  dataKey="index"
+  stroke="#6B7A94"
+  style={{ fontSize: '11px', fontFamily: 'Vazirmatn' }}
+  tick={{ fill: '#6B7A94' }}
+/>
+<YAxis
+  stroke="#6B7A94"
+  style={{ fontSize: '11px', fontFamily: 'Vazirmatn' }}
+  tick={{ fill: '#6B7A94' }}
+/>
         <Tooltip
           contentStyle={{
             backgroundColor: '#14141E',

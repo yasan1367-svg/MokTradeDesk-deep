@@ -37,18 +37,18 @@ const NAV_GROUPS = [
 export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   return (
     <aside className="w-[250px] bg-[#152238] text-[#B9C8DE] flex flex-col py-5 overflow-y-auto shadow-[4px_0_24px_rgba(21,34,56,0.15)] z-10 shrink-0">
-      <div className="px-5 pb-7 flex items-center gap-3">
-        <div
-          className="w-10 h-10 rounded-[14px] flex items-center justify-center text-xl text-white shadow-[0_8px_20px_rgba(63,124,255,0.4)]"
-          style={{ background: 'linear-gradient(135deg, #3F7CFF, #5B8DEF)' }}
-        >
-          ⚡
-        </div>
-        <div>
-          <div className="text-lg font-extrabold text-white">MokTradeDesk</div>
-          <div className="text-[15px] text-[#8DA2C1] tracking-wider">Analyze • Improve • Grow</div>
-        </div>
-      </div>
+      <div className="px-5 pb-7 flex flex-col gap-2">
+  <div className="flex items-center gap-3">
+    <div
+      className="w-11 h-11 rounded-[14px] flex items-center justify-center text-xl text-white shadow-[0_8px_20px_rgba(63,124,255,0.4)] shrink-0"
+      style={{ background: 'linear-gradient(135deg, #3F7CFF, #5B8DEF)' }}
+    >
+      ⚡
+    </div>
+    <div className="text-xl font-extrabold text-white leading-tight">MokTradeDesk</div>
+  </div>
+  <div className="text-[10px] text-[#8DA2C1] tracking-wider pr-[54px]">Analyze • Improve • Grow</div>
+</div>
 
       {NAV_GROUPS.map((group) => (
         <div key={group.label} className="mb-1.5">

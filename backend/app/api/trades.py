@@ -304,13 +304,12 @@ async def upload_screenshot(
     file_hash = hashlib.md5(content).hexdigest()
 
     screenshot = Screenshot(
-        entity_type="trade",
-        entity_id=trade_id,
-        trade_id=trade_id,
-        file_path=file_path,
-        file_hash=file_hash,
-        description=description,
-    )
+    entity_type="trade",
+    entity_id=trade_id,
+    file_path=file_path,
+    file_hash=file_hash,
+    description=description,
+)
     db.add(screenshot)
     db.commit()
     db.refresh(screenshot)
