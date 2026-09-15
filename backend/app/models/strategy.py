@@ -166,3 +166,13 @@ class AnalysisResult(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     version = relationship("StrategyVersion", back_populates="analysis_results")
+
+
+class SymbolMapping(Base):
+    __tablename__ = "symbol_mappings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    original_symbol = Column(String, nullable=False, unique=True)
+    canonical_symbol = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)

@@ -77,7 +77,6 @@ class Soft4XImporter:
         version_id: Optional[int] = None,
         prop_stage_id: Optional[int] = None,
     ) -> List[Trade]:
-        """ذخیره معاملات در دیتابیس (می‌تواند به نسخه یا مرحله پراپ متصل باشد)"""
         db_trades = []
         for trade_data in trades:
             db_trade = Trade(
@@ -89,7 +88,39 @@ class Soft4XImporter:
             db_trades.append(db_trade)
 
         self.db.commit()
+
+        if prop_stage_id:
+            self._update_prop_stage_profit(prop_stage_id)
+
         return db_trades
+
+    def _update_prop_stage_profit(self, prop_stage_id: int):
+        from ..models.prop import PropStage, StageType
+
+        stage = self.db.query(PropStage).filter(PropStage.id == prop_stage_id).first()
+        if not stage:
+            return
+
+        all_trades = self.db.query(Trade).filter(Trade.prop_stage_id == prop_stage_id).all()
+        total_pnl = sum(t.pnl or 0 for t in all_trades)
+
+        if stage.stage_type == StageType.FUNDED_REAL:
+            share = (stage.profit_share_percentage or 80.0) / 100.0
+            stage.current_profit = total_pnl * share
+        else:
+            stage.current_profit = total_pnl
+
+        self.db.commit()
+
+    def _apply_symbol_mapping(self, symbol: str) -> str:
+        """تبدیل نماد اصلی به نماد استاندارد"""
+        from ..models.strategy import SymbolMapping
+        mapping = self.db.query(SymbolMapping).filter(
+            SymbolMapping.original_symbol == symbol
+        ).first()
+        if mapping:
+            return mapping.canonical_symbol
+        return symbol
 
     def _get_value(self, row, index, default=None):
         if index is None:
@@ -221,7 +252,7 @@ class MT4Importer:
             direction = "buy" if "buy" in direction_raw else "sell"
 
             return {
-                "symbol": symbol,
+                "symbol": self._apply_symbol_mapping(symbol),
                 "test_type": self.test_type,
                 "direction": direction,
                 "open_time": open_time,
@@ -252,7 +283,6 @@ class MT4Importer:
         version_id: Optional[int] = None,
         prop_stage_id: Optional[int] = None,
     ) -> List[Trade]:
-        """ذخیره معاملات در دیتابیس (می‌تواند به نسخه یا مرحله پراپ متصل باشد)"""
         db_trades = []
         for trade_data in trades:
             db_trade = Trade(
@@ -264,7 +294,39 @@ class MT4Importer:
             db_trades.append(db_trade)
 
         self.db.commit()
+
+        if prop_stage_id:
+            self._update_prop_stage_profit(prop_stage_id)
+
         return db_trades
+
+    def _update_prop_stage_profit(self, prop_stage_id: int):
+        from ..models.prop import PropStage, StageType
+
+        stage = self.db.query(PropStage).filter(PropStage.id == prop_stage_id).first()
+        if not stage:
+            return
+
+        all_trades = self.db.query(Trade).filter(Trade.prop_stage_id == prop_stage_id).all()
+        total_pnl = sum(t.pnl or 0 for t in all_trades)
+
+        if stage.stage_type == StageType.FUNDED_REAL:
+            share = (stage.profit_share_percentage or 80.0) / 100.0
+            stage.current_profit = total_pnl * share
+        else:
+            stage.current_profit = total_pnl
+
+        self.db.commit()
+
+    def _apply_symbol_mapping(self, symbol: str) -> str:
+        """تبدیل نماد اصلی به نماد استاندارد"""
+        from ..models.strategy import SymbolMapping
+        mapping = self.db.query(SymbolMapping).filter(
+            SymbolMapping.original_symbol == symbol
+        ).first()
+        if mapping:
+            return mapping.canonical_symbol
+        return symbol
 
     def _to_float(self, value: str) -> Optional[float]:
         if not value or value in ['', '-', 'N/A']:

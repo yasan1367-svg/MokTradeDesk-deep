@@ -4,6 +4,10 @@ import {
   importSoft4X,
   importMT4,
   getAllPropStages,
+  getSymbolMappings,
+  createSymbolMapping,
+  deleteSymbolMapping,
+  seedSymbolMappings,
 } from '../api/client';
 
 interface Version {
@@ -33,6 +37,14 @@ export default function ImportPage() {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Symbol Mapping
+  const [showMappingModal, setShowMappingModal] = useState(false);
+  const [mappings, setMappings] = useState<any[]>([]);
+  const [newOriginal, setNewOriginal] = useState('');
+  const [newCanonical, setNewCanonical] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [mappingError, setMappingError] = useState<string | null>(null);
+
   useEffect(() => {
     getAllVersions()
       .then((res) => setVersions(res.data))
@@ -43,6 +55,9 @@ export default function ImportPage() {
       .catch((err) => console.error('خطا در دریافت مراحل پراپ:', err));
   }, []);
 
+  // ═════════════════════════════════════════════
+  // File Handling
+  // ═════════════════════════════════════════════
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -103,6 +118,63 @@ export default function ImportPage() {
     }
   };
 
+  // ═════════════════════════════════════════════
+  // Symbol Mapping Handlers
+  // ═════════════════════════════════════════════
+  const loadMappings = async () => {
+    try {
+      const res = await getSymbolMappings();
+      setMappings(res.data);
+    } catch (err) {
+      console.error('خطا:', err);
+    }
+  };
+
+  const handleOpenMappingModal = async () => {
+    await loadMappings();
+    setShowMappingModal(true);
+  };
+
+  const handleCreateMapping = async () => {
+    if (!newOriginal.trim() || !newCanonical.trim()) {
+      setMappingError('نماد اصلی و استاندارد الزامی هستند');
+      return;
+    }
+    try {
+      await createSymbolMapping({
+        original_symbol: newOriginal,
+        canonical_symbol: newCanonical,
+        description: newDescription,
+      });
+      setNewOriginal('');
+      setNewCanonical('');
+      setNewDescription('');
+      setMappingError(null);
+      await loadMappings();
+    } catch (err: any) {
+      setMappingError(err.response?.data?.detail || 'خطا');
+    }
+  };
+
+  const handleDeleteMapping = async (id: number) => {
+    if (!confirm('حذف این Mapping؟')) return;
+    try {
+      await deleteSymbolMapping(id);
+      await loadMappings();
+    } catch (err: any) {
+      setMappingError(err.response?.data?.detail || 'خطا');
+    }
+  };
+
+  const handleSeedMappings = async () => {
+    try {
+      await seedSymbolMappings();
+      await loadMappings();
+    } catch (err: any) {
+      setMappingError(err.response?.data?.detail || 'خطا');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {error && (
@@ -112,10 +184,18 @@ export default function ImportPage() {
         </div>
       )}
 
+      {/* دکمه‌ی مدیریت Symbol Mapping */}
+      <div className="flex gap-3 flex-wrap">
+        <button
+          onClick={handleOpenMappingModal}
+          className="bg-white border-2 border-[#E5EBF3] text-[#6B7A94] hover:border-[#A9C1FA] hover:text-[#3F7CFF] px-6 py-3 rounded-[12px] text-sm font-extrabold transition-all shadow-sm"
+        >
+          🔗 مدیریت Symbol Mapping
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* ═══════════════════════════════════════════
-            ستون چپ: تنظیمات
-        ═══════════════════════════════════════════ */}
+        {/* ستون چپ: تنظیمات */}
         <div className="bg-white border border-[#E5EBF3] rounded-[22px] p-6 shadow-md">
           <div className="flex items-center gap-3 mb-6 pb-4 border-b border-[#E5EBF3]">
             <div className="w-11 h-11 rounded-[14px] flex items-center justify-center text-xl text-white"
@@ -269,9 +349,7 @@ export default function ImportPage() {
           )}
         </div>
 
-        {/* ═══════════════════════════════════════════
-            ستون راست: آپلود
-        ═══════════════════════════════════════════ */}
+        {/* ستون راست: آپلود */}
         <div className="bg-white border border-[#E5EBF3] rounded-[22px] p-6 shadow-md">
           <div className="flex items-center gap-3 mb-6 pb-4 border-b border-[#E5EBF3]">
             <div className="w-11 h-11 rounded-[14px] flex items-center justify-center text-xl text-white"
@@ -369,9 +447,7 @@ export default function ImportPage() {
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════════
-          نتیجه‌ی واردات
-      ═══════════════════════════════════════════ */}
+      {/* نتیجه‌ی واردات */}
       {result && (
         <div className="bg-white border border-[#E5EBF3] rounded-[22px] p-6 shadow-md">
           <div className="flex items-center gap-3 mb-5 pb-4 border-b border-[#E5EBF3]">
@@ -385,7 +461,7 @@ export default function ImportPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div className="bg-[#EDF3FF] border border-[#A9C1FA] rounded-[16px] p-5">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 rounded-[12px] bg-white flex items-center justify-center text-xl shadow-sm">
@@ -417,6 +493,141 @@ export default function ImportPage() {
               </div>
               <div className="text-[13px] font-extrabold text-[#D99B25] leading-relaxed">
                 {result.message}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═════════════════════════════════════════════
+          مودال Symbol Mapping
+      ═════════════════════════════════════════════ */}
+      {showMappingModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-[22px] max-w-3xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+            <div className="flex justify-between items-center p-6 border-b border-[#E5EBF3]">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-[14px] flex items-center justify-center text-xl text-white"
+                  style={{ background: 'linear-gradient(135deg, #7959D6, #A78BFA)' }}>
+                  🔗
+                </div>
+                <div>
+                  <h3 className="text-lg font-extrabold text-[#1A2B47]">مدیریت Symbol Mapping</h3>
+                  <p className="text-[12px] text-[#6B7A94] mt-0.5">تبدیل نمادهای مختلف به نماد استاندارد</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowMappingModal(false)}
+                className="text-[#6B7A94] text-xl w-9 h-9 rounded-lg hover:bg-[#F5F7FB] transition-all"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 max-h-[calc(90vh-120px)] overflow-y-auto space-y-5">
+              {mappingError && (
+                <div className="bg-[#FFEDF0] border border-[#F0A6B2] text-[#E45D72] p-3 rounded-[12px] text-[13px] font-semibold">
+                  ❌ {mappingError}
+                </div>
+              )}
+
+              {/* فرم افزودن */}
+              <div className="bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[14px] p-5">
+                <h4 className="text-[14px] font-extrabold text-[#1A2B47] mb-4">➕ افزودن Mapping جدید</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                  <div>
+                    <label className="text-[12px] text-[#6B7A94] font-bold block mb-1.5">نماد اصلی *</label>
+                    <input
+                      type="text"
+                      value={newOriginal}
+                      onChange={(e) => setNewOriginal(e.target.value)}
+                      placeholder="DJIUSD.x"
+                      dir="ltr"
+                      className="w-full bg-white border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#7959D6] focus:outline-none text-center font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[12px] text-[#6B7A94] font-bold block mb-1.5">نماد استاندارد *</label>
+                    <input
+                      type="text"
+                      value={newCanonical}
+                      onChange={(e) => setNewCanonical(e.target.value)}
+                      placeholder="DJIUSD"
+                      dir="ltr"
+                      className="w-full bg-white border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#7959D6] focus:outline-none text-center font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[12px] text-[#6B7A94] font-bold block mb-1.5">توضیحات</label>
+                    <input
+                      type="text"
+                      value={newDescription}
+                      onChange={(e) => setNewDescription(e.target.value)}
+                      placeholder="اختیاری"
+                      className="w-full bg-white border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-medium focus:border-[#7959D6] focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={handleCreateMapping}
+                  className="text-white px-5 py-2.5 rounded-[10px] text-[12px] font-extrabold"
+                  style={{ background: 'linear-gradient(135deg, #7959D6, #A78BFA)' }}
+                >
+                  ➕ افزودن
+                </button>
+              </div>
+
+              {/* لیست Mappingها */}
+              <div>
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="text-[14px] font-extrabold text-[#1A2B47]">
+                    📋 لیست Mappingها ({mappings.length})
+                  </h4>
+                  {mappings.length === 0 && (
+                    <button
+                      onClick={handleSeedMappings}
+                      className="bg-[#EDF3FF] border border-[#A9C1FA] text-[#3F7CFF] px-4 py-2 rounded-[10px] text-[12px] font-bold hover:bg-[#DCE8FF] transition-all"
+                    >
+                      📦 وارد کردن پیش‌فرض‌ها
+                    </button>
+                  )}
+                </div>
+
+                {mappings.length === 0 ? (
+                  <div className="text-[#9AA8BF] text-sm text-center py-8 bg-[#F8FAFF] rounded-[12px]">
+                    هنوز Mappingی تعریف نکرده‌اید
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {mappings.map((m) => (
+                      <div
+                        key={m.id}
+                        className="bg-white border border-[#E5EBF3] rounded-[12px] p-4 flex justify-between items-center hover:border-[#A9C1FA] transition-all"
+                      >
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <span className="bg-[#F5F7FB] border border-[#E5EBF3] px-3 py-1.5 rounded-[8px] text-[13px] font-mono font-bold text-[#6B7A94]" dir="ltr">
+                            {m.original_symbol}
+                          </span>
+                          <span className="text-[#9AA8BF] text-lg">→</span>
+                          <span className="bg-[#E5F8F1] border border-[#A8E6CF] px-3 py-1.5 rounded-[8px] text-[13px] font-mono font-bold text-[#13AE81]" dir="ltr">
+                            {m.canonical_symbol}
+                          </span>
+                          {m.description && (
+                            <span className="text-[11px] text-[#9AA8BF] font-medium">
+                              ({m.description})
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleDeleteMapping(m.id)}
+                          className="text-[#E45D72] hover:bg-[#FFEDF0] px-3 py-1.5 rounded-[8px] text-[12px] font-bold transition-all"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>

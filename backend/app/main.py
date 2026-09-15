@@ -4,8 +4,7 @@ from fastapi.staticfiles import StaticFiles
 import os
 
 from .core.database import engine, Base
-from .api import strategies, prop, personal, imports, analytics, trades
-
+from .api import strategies, prop, personal, imports, analytics, trades, symbol_mappings
 app = FastAPI(title="MokTradeDesk API", version="1.0")
 
 app.add_middleware(
@@ -34,6 +33,7 @@ app.include_router(personal.router, prefix="/api/personal", tags=["personal"])
 app.include_router(imports.router, prefix="/api/imports", tags=["imports"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(trades.router, prefix="/api/trades", tags=["trades"])
+app.include_router(symbol_mappings.router, prefix="/api/symbol-mappings", tags=["symbol-mappings"])
 
 @app.get("/")
 def root():

@@ -315,3 +315,28 @@ export const deleteJournalReview = (reviewId: number) =>
 
 export const getPropAccountsForLedger = () =>
   api.get('/api/personal/prop-accounts-list');
+// ─────────────────────────────────────────────
+// Symbol Mappings
+// ─────────────────────────────────────────────
+export const getSymbolMappings = () => api.get('/api/symbol-mappings/');
+
+export const createSymbolMapping = (data: {
+  original_symbol: string;
+  canonical_symbol: string;
+  description?: string;
+}) => api.post('/api/symbol-mappings/', data);
+
+export const updateSymbolMapping = (
+  id: number,
+  data: {
+    original_symbol?: string;
+    canonical_symbol?: string;
+    description?: string;
+  }
+) => api.patch(`/api/symbol-mappings/${id}`, data);
+
+export const deleteSymbolMapping = (id: number) =>
+  api.delete(`/api/symbol-mappings/${id}`);
+
+export const seedSymbolMappings = () =>
+  api.post('/api/symbol-mappings/seed-defaults');
