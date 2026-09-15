@@ -46,13 +46,13 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         </div>
         <div>
           <div className="text-lg font-extrabold text-white">MokTradeDesk</div>
-          <div className="text-[10px] text-[#8DA2C1] tracking-wider">Analyze • Improve • Grow</div>
+          <div className="text-[15px] text-[#8DA2C1] tracking-wider">Analyze • Improve • Grow</div>
         </div>
       </div>
 
       {NAV_GROUPS.map((group) => (
         <div key={group.label} className="mb-1.5">
-          <div className="px-5 py-3 pb-1 text-[10px] text-[#8DA2C1] uppercase tracking-widest font-semibold">
+          <div className="px-5 py-3 pb-1 text-[15px] text-[#8DA2C1] uppercase tracking-widest font-semibold">
             {group.label}
           </div>
           {group.items.map((item) => {
@@ -61,7 +61,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
               <div
                 key={item.key}
                 onClick={() => onNavigate(item.key)}
-                className={`flex items-center gap-3 mx-3 px-5 py-2.5 rounded-[10px] cursor-pointer text-sm transition-all relative ${
+                className={`flex items-center gap-3 mx-3 px-5 py-3 rounded-[10px] cursor-pointer text-sm transition-all relative ${
                   isActive
                     ? 'text-white bg-[#1E2F4D] font-medium shadow-[0_4px_12px_rgba(0,0,0,0.15)]'
                     : 'text-[#B9C8DE] hover:text-white hover:bg-[#1E2F4D]'
@@ -70,7 +70,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                 {isActive && (
                   <div className="absolute right-[-12px] top-2 bottom-2 w-[3px] bg-[#76A4FF] rounded-r-sm" />
                 )}
-                <span className="text-base w-5 text-center">{item.icon}</span>
+                <span className="text-base w-6 text-center">{item.icon}</span>
                 <span>{item.label}</span>
               </div>
             );
@@ -87,7 +87,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         </div>
         <div>
           <div className="text-sm font-semibold text-white">Mokary</div>
-          <div className="text-[11px] text-[#8DA2C1]">Pro Trader</div>
+          <div className="text-[15px] text-[#8DA2C1]">Pro Trader</div>
         </div>
       </div>
     </aside>

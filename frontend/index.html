@@ -2,27 +2,21 @@
 <html lang="fa" dir="rtl">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#f5f5fa" />
-    <script>
-      try {
-        const theme = localStorage.getItem('mok_theme') || 'light';
-        document.documentElement.dataset.theme = theme;
-      } catch { document.documentElement.dataset.theme = 'light'; }
-    </script>
-    <title>MokTradeDesk Personal OS - تحلیل و مدیریت معامله</title>
-    <meta name="description" content="سیستم جامع مدیریت چرخه کامل ترید، استراتژی‌ها، بک‌تست، معاملات پراپ و شخصی، تحلیل پیشرفته و دفتر کل حسابداری" />
-    <meta property="og:title" content="MokTradeDesk Personal OS - تحلیل و مدیریت معامله" />
-    <meta property="og:description" content="سیستم جامع مدیریت چرخه کامل ترید، استراتژی‌ها، بک‌تست، معاملات پراپ و شخصی، تحلیل پیشرفته و دفتر کل حسابداری" />
-    <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="MokTradeDesk - نرم‌افزار مدیریت معاملات" />
+    <title>MokTradeDesk</title>
+    
+    <!-- فونت Vazirmatn -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <link 
+      href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" 
+      rel="stylesheet" 
+      type="text/css" 
+    />
   </head>
-  <body class="antialiased">
+  <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-
