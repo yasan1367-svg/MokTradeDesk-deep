@@ -31,6 +31,7 @@ export const getIntervals = (symbol?: string) =>
   api.get('/api/analytics/intervals/', { params: symbol ? { symbol } : {} });
 export const compareVersionsWithDetails = (versionIds: number[]) =>
   api.post('/api/analytics/compare', { version_ids: versionIds });
+export const getPropAnalytics = () => api.get('/api/prop/analytics');
 
 // ─────────────────────────────────────────────
 // Import
@@ -341,6 +342,10 @@ export const deleteSymbolMapping = (id: number) =>
 export const seedSymbolMappings = () =>
   api.post('/api/symbol-mappings/seed-defaults');
 
+
+
+
+
 // ─────────────────────────────────────────────
 // Settings
 // ─────────────────────────────────────────────
@@ -355,3 +360,4 @@ export const updateSettings = (data: {
   default_risk_percent?: number;
   default_profit_share?: number;
 }) => api.patch('/api/settings/', data);
+

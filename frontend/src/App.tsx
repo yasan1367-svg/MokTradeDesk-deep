@@ -4,13 +4,14 @@ import AnalysisPage from './pages/AnalysisPage';
 import ComparisonPage from './pages/ComparisonPage';
 import StrategyPage from './pages/StrategyPage';
 import TradesPage from './pages/TradesPage';
+import JournalPage from './pages/JournalPage';
 import PropPage from './pages/PropPage';
 import PersonalPage from './pages/PersonalPage';
 import ImportPage from './pages/ImportPage';
 import DashboardPage from './pages/DashboardPage';
 import SettingsPage from './pages/SettingsPage';
 
-type Page = 'dashboard' | 'analysis' | 'comparison' | 'strategy' | 'trades' | 'prop' | 'personal' | 'import' | 'settings';
+type Page = 'dashboard' | 'analysis' | 'comparison' | 'strategy' | 'trades' | 'journal' | 'prop' | 'personal' | 'import' | 'settings';
 
 const PAGE_TITLES: Record<Page, { title: string; subtitle: string }> = {
   dashboard: { title: '📊 داشبورد', subtitle: 'نمای کلی عملکرد معاملاتی' },
@@ -18,6 +19,7 @@ const PAGE_TITLES: Record<Page, { title: string; subtitle: string }> = {
   comparison: { title: '⚖️ مقایسه', subtitle: 'مقایسه‌ی چند نسخه' },
   strategy: { title: '🎯 استراتژی', subtitle: 'مدیریت استراتژی‌ها و نسخه‌ها' },
   trades: { title: '📋 معاملات', subtitle: 'مدیریت معاملات و اسکرین‌شات' },
+  journal: { title: '📔 ژورنال', subtitle: 'مرور و درس‌های معاملات' },
   prop: { title: '🏢 پراپ', subtitle: 'مدیریت چالش‌های پراپ' },
   personal: { title: '🏦 شخصی', subtitle: 'معاملات شخصی و حسابداری' },
   import: { title: '📥 واردات', subtitle: 'واردات معاملات از فایل' },
@@ -56,6 +58,7 @@ export default function App() {
           {page === 'comparison' && <ComparisonPage />}
           {page === 'strategy' && <StrategyPage />}
           {page === 'trades' && <TradesPage />}
+          {page === 'journal' && <JournalPage />}
           {page === 'prop' && <PropPage />}
           {page === 'personal' && <PersonalPage />}
           {page === 'import' && <ImportPage />}

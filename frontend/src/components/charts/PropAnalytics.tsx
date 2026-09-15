@@ -1,0 +1,146 @@
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+
+interface PropAnalyticsProps {
+  data: any;
+}
+
+const FAILURE_LABELS: Record<string, string> = {
+  max_daily_dd_exceeded: 'نقض DD روزانه',
+  max_total_dd_exceeded: 'نقض DD کلی',
+  profit_target_not_met: 'عدم رسیدن به هدف',
+  min_trading_days_not_met: 'کمبود روزها',
+  rule_violation: 'نقض قانون',
+  manual: 'فیل دستی',
+  other: 'سایر',
+};
+
+const STAGE_LABELS: Record<string, string> = {
+  stage_1: 'مرحله ۱',
+  stage_2: 'مرحله ۲',
+  funded_real: 'رییل',
+};
+
+export default function PropAnalytics({ data }: PropAnalyticsProps) {
+  if (!data) return null;
+
+  // داده‌ی دلایل فیل‌شدن
+  const failureData = Object.entries(data.failure_reasons || {}).map(([key, value]) => ({
+    name: FAILURE_LABELS[key] || key,
+    value: value as number,
+  }));
+
+  // داده‌ی مقایسه‌ی مراحل
+  const stageData = Object.entries(data.by_type || {}).map(([key, value]: [string, any]) => ({
+    name: STAGE_LABELS[key] || key,
+    passed: value.passed,
+    failed: value.failed,
+    active: value.active,
+  }));
+
+  const FAILURE_COLORS = ['#E45D72', '#F0A6B2', '#D99B25', '#7959D6', '#3F7CFF', '#13AE81', '#6B7A94'];
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* نمودار دلایل فیل‌شدن */}
+      <div className="bg-white border border-[#E5EBF3] rounded-[22px] p-6 shadow-md">
+        <div className="flex items-center gap-3 mb-5 pb-4 border-b border-[#E5EBF3]">
+          <div className="w-11 h-11 rounded-[14px] bg-[#FFEDF0] flex items-center justify-center text-xl">
+            ⚠️
+          </div>
+          <div>
+            <h3 className="text-base font-extrabold text-[#1A2B47]">دلایل فیل‌شدن</h3>
+            <p className="text-[12px] text-[#6B7A94] mt-0.5">تفکیک بر اساس دلیل</p>
+          </div>
+        </div>
+
+        {failureData.length === 0 ? (
+          <div className="text-[#9AA8BF] text-sm text-center py-12">
+            هنوز چالشی فیل نشده است
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={260}>
+            <PieChart>
+              <Pie
+                data={failureData}
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={90}
+                paddingAngle={3}
+                dataKey="value"
+              >
+                {failureData.map((_, index) => (
+                  <Cell key={`cell-${index}`} fill={FAILURE_COLORS[index % FAILURE_COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#FFFFFF',
+                  border: '2px solid #E5EBF3',
+                  borderRadius: '12px',
+                  color: '#1A2B47',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                }}
+                formatter={(value: any) => [`${value} بار`, 'تعداد']}
+              />
+              <Legend
+                wrapperStyle={{ fontSize: '11px', color: '#1A2B47', fontWeight: 'bold' }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+
+      {/* نمودار مقایسه‌ی مراحل */}
+      <div className="bg-white border border-[#E5EBF3] rounded-[22px] p-6 shadow-md">
+        <div className="flex items-center gap-3 mb-5 pb-4 border-b border-[#E5EBF3]">
+          <div className="w-11 h-11 rounded-[14px] bg-[#EDF3FF] flex items-center justify-center text-xl">
+            📊
+          </div>
+          <div>
+            <h3 className="text-base font-extrabold text-[#1A2B47]">وضعیت مراحل</h3>
+            <p className="text-[12px] text-[#6B7A94] mt-0.5">پاس‌شده، فیل‌شده، فعال</p>
+          </div>
+        </div>
+
+        {stageData.length === 0 ? (
+          <div className="text-[#9AA8BF] text-sm text-center py-12">
+            داده‌ای وجود ندارد
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={stageData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5EBF3" />
+              <XAxis
+                dataKey="name"
+                stroke="#6B7A94"
+                style={{ fontSize: '12px', fontFamily: 'Vazirmatn', fontWeight: 'bold' }}
+              />
+              <YAxis
+                stroke="#6B7A94"
+                style={{ fontSize: '11px', fontFamily: 'Vazirmatn' }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#FFFFFF',
+                  border: '2px solid #E5EBF3',
+                  borderRadius: '12px',
+                  color: '#1A2B47',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                }}
+              />
+              <Bar dataKey="passed" fill="#13AE81" radius={[8, 8, 0, 0]} name="پاس‌شده" />
+              <Bar dataKey="active" fill="#3F7CFF" radius={[8, 8, 0, 0]} name="فعال" />
+              <Bar dataKey="failed" fill="#E45D72" radius={[8, 8, 0, 0]} name="فیل‌شده" />
+              <Legend
+                wrapperStyle={{ fontSize: '11px', color: '#1A2B47', fontWeight: 'bold' }}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+    </div>
+  );
+}

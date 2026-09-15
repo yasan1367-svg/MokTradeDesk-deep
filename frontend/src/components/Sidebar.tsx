@@ -13,12 +13,13 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: 'تحقیق و توسعه',
-    items: [
-      { key: 'strategy', icon: '🎯', label: 'استراتژی' },
-      { key: 'trades', icon: '📋', label: 'معاملات' },
-    ],
-  },
+  label: 'تحقیق و توسعه',
+  items: [
+    { key: 'strategy', icon: '🎯', label: 'استراتژی' },
+    { key: 'trades', icon: '📋', label: 'معاملات' },
+    { key: 'journal', icon: '📔', label: 'ژورنال' },
+  ],
+},
   {
     label: 'حساب‌ها',
     items: [

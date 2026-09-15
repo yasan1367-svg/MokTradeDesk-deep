@@ -478,3 +478,67 @@ def create_cost(cost: PropCostCreate, db: Session = Depends(get_db)):
 def get_costs(account_id: int, db: Session = Depends(get_db)):
     costs = db.query(PropCost).filter(PropCost.prop_account_id == account_id).all()
     return costs
+
+@router.get("/analytics")
+def get_prop_analytics(db: Session = Depends(get_db)):
+    """گزارش تحلیلی پراپ"""
+    from ..models.prop import PropStage, StageType, StageStatus, FailureReason
+
+    all_stages = db.query(PropStage).all()
+
+    # آمار کلی
+    total_stages = len(all_stages)
+    passed_count = sum(1 for s in all_stages if s.status == StageStatus.PASSED)
+    failed_count = sum(1 for s in all_stages if s.status == StageStatus.FAILED)
+    active_count = sum(1 for s in all_stages if s.status == StageStatus.ACTIVE)
+
+    # تفکیک بر اساس نوع
+    by_type = {}
+    for s in all_stages:
+        type_key = s.stage_type.value if s.stage_type else "unknown"
+        if type_key not in by_type:
+            by_type[type_key] = {"total": 0, "passed": 0, "failed": 0, "active": 0}
+        by_type[type_key]["total"] += 1
+        if s.status == StageStatus.PASSED:
+            by_type[type_key]["passed"] += 1
+        elif s.status == StageStatus.FAILED:
+            by_type[type_key]["failed"] += 1
+        elif s.status == StageStatus.ACTIVE:
+            by_type[type_key]["active"] += 1
+
+    # دلایل فیل‌شدن
+    failure_reasons = {}
+    failed_stages = [s for s in all_stages if s.status == StageStatus.FAILED]
+    for s in failed_stages:
+        if s.failure_reason:
+            reason = s.failure_reason.value
+            failure_reasons[reason] = failure_reasons.get(reason, 0) + 1
+
+    # سود کل مرحله رییل
+    total_profit = sum(s.current_profit or 0 for s in all_stages if s.stage_type == StageType.FUNDED_REAL)
+    total_withdrawn = sum(s.total_withdrawn or 0 for s in all_stages if s.stage_type == StageType.FUNDED_REAL)
+
+    # میانگین زمان پاس‌شدن
+    passed_with_dates = [
+        s for s in all_stages
+        if s.status == StageStatus.PASSED and s.start_date and s.end_date
+    ]
+    avg_days_to_pass = 0
+    if passed_with_dates:
+        total_days = sum((s.end_date - s.start_date).days for s in passed_with_dates)
+        avg_days_to_pass = round(total_days / len(passed_with_dates), 1)
+
+    return {
+        "summary": {
+            "total_stages": total_stages,
+            "passed_count": passed_count,
+            "failed_count": failed_count,
+            "active_count": active_count,
+            "pass_rate": round((passed_count / total_stages * 100) if total_stages > 0 else 0, 1),
+            "total_profit": round(total_profit, 2),
+            "total_withdrawn": round(total_withdrawn, 2),
+            "avg_days_to_pass": avg_days_to_pass,
+        },
+        "by_type": by_type,
+        "failure_reasons": failure_reasons,
+    }

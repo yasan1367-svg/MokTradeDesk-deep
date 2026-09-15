@@ -12,7 +12,9 @@ import {
   passStageWithRules,
   updateStageRules,
   getPersonalAccounts,
+  getPropAnalytics,
 } from '../api/client';
+import PropAnalytics from '../components/charts/PropAnalytics';
 
 interface Firm {
   id: number;
@@ -56,9 +58,9 @@ const getStageTypeLabel = (type: string) => {
 };
 
 const getStageColor = (type: string) => {
-  if (type === 'stage_1') return { bg: 'bg-[#F1ECFF]', text: 'text-[#7959D6]', border: 'border-[#D5C8F5]', icon: '🥇' };
-  if (type === 'stage_2') return { bg: 'bg-[#EDF3FF]', text: 'text-[#3F7CFF]', border: 'border-[#A9C1FA]', icon: '🥈' };
-  return { bg: 'bg-[#E5F8F1]', text: 'text-[#13AE81]', border: 'border-[#A8E6CF]', icon: '💰' };
+  if (type === 'stage_1') return { bg: 'bg-[#F1ECFF]', text: 'text-[#7959D6]', border: 'border-[#D5C8F5]' };
+  if (type === 'stage_2') return { bg: 'bg-[#EDF3FF]', text: 'text-[#3F7CFF]', border: 'border-[#A9C1FA]' };
+  return { bg: 'bg-[#E5F8F1]', text: 'text-[#13AE81]', border: 'border-[#A8E6CF]' };
 };
 
 const getStatusBadge = (status: string) => {
@@ -127,6 +129,9 @@ export default function PropPage() {
   const [failReason, setFailReason] = useState('max_daily_dd_exceeded');
   const [failDetails, setFailDetails] = useState('');
 
+  const [propAnalytics, setPropAnalytics] = useState<any>(null);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -154,6 +159,16 @@ export default function PropPage() {
     try {
       const res = await getPersonalAccounts();
       setPersonalAccounts(res.data);
+    } catch (err) {
+      console.error('خطا:', err);
+    }
+  };
+
+  const loadAnalytics = async () => {
+    try {
+      const res = await getPropAnalytics();
+      setPropAnalytics(res.data);
+      setShowAnalytics(true);
     } catch (err) {
       console.error('خطا:', err);
     }
@@ -382,12 +397,53 @@ export default function PropPage() {
         <button
           onClick={() => setShowAccountForm(!showAccountForm)}
           disabled={firms.length === 0}
-          className="text-white px-6 py-3 rounded-[12px] text-sm font-extrabold transition-all shadow-[0_6px_16px_rgba(19,174,129,0.3)] hover:shadow-[0_10px_24px_rgba(19,174,129,0.4)] hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+          className="text-white px-6 py-3 rounded-[12px] text-sm font-extrabold transition-all shadow-[0_6px_16px_rgba(19,174,129,0.3)] hover:shadow-[0_10px_24px_rgba(19,174,129,0.4)] hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ background: 'linear-gradient(135deg, #13AE81, #4DD9A9)' }}
         >
           ➕ اکانت پراپ جدید
         </button>
+        <button
+          onClick={loadAnalytics}
+          className="bg-white border-2 border-[#E5EBF3] text-[#6B7A94] hover:border-[#A9C1FA] hover:text-[#3F7CFF] px-6 py-3 rounded-[12px] text-sm font-extrabold transition-all shadow-sm"
+        >
+          📊 گزارش تحلیلی
+        </button>
       </div>
+
+      {/* گزارش تحلیلی */}
+      {showAnalytics && propAnalytics && (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+            <div className="bg-white border border-[#E5EBF3] rounded-[22px] p-5 shadow-md">
+              <div className="text-[12px] text-[#6B7A94] font-bold mb-2">📊 کل مراحل</div>
+              <div className="text-[28px] font-extrabold text-[#1A2B47]">{propAnalytics.summary.total_stages}</div>
+            </div>
+            <div className="bg-[#E5F8F1] border border-[#A8E6CF] rounded-[22px] p-5 shadow-md">
+              <div className="text-[12px] text-[#6B7A94] font-bold mb-2">✅ پاس‌شده</div>
+              <div className="text-[28px] font-extrabold text-[#13AE81]">{propAnalytics.summary.passed_count}</div>
+            </div>
+            <div className="bg-[#FFEDF0] border border-[#F0A6B2] rounded-[22px] p-5 shadow-md">
+              <div className="text-[12px] text-[#6B7A94] font-bold mb-2">❌ فیل‌شده</div>
+              <div className="text-[28px] font-extrabold text-[#E45D72]">{propAnalytics.summary.failed_count}</div>
+            </div>
+            <div className="bg-[#EDF3FF] border border-[#A9C1FA] rounded-[22px] p-5 shadow-md">
+              <div className="text-[12px] text-[#6B7A94] font-bold mb-2">📈 نرخ پاس</div>
+              <div className="text-[28px] font-extrabold text-[#3F7CFF]">{propAnalytics.summary.pass_rate}٪</div>
+            </div>
+          </div>
+
+          <PropAnalytics data={propAnalytics} />
+
+          <div className="flex justify-end">
+            <button
+              onClick={() => setShowAnalytics(false)}
+              className="bg-white border-2 border-[#E5EBF3] text-[#6B7A94] hover:border-[#A9C1FA] px-5 py-2.5 rounded-[12px] text-[12px] font-bold transition-all"
+            >
+              ✕ بستن گزارش
+            </button>
+          </div>
+        </>
+      )}
 
       {/* فرم شرکت */}
       {showFirmForm && (
@@ -417,14 +473,14 @@ export default function PropPage() {
           <div className="flex gap-3 pt-4 border-t border-[#E5EBF3]">
             <button
               onClick={handleCreateFirm}
-              className="text-white px-7 py-3 rounded-[12px] text-sm font-extrabold transition-all"
+              className="text-white px-7 py-3 rounded-[12px] text-sm font-extrabold"
               style={{ background: 'linear-gradient(135deg, #13AE81, #4DD9A9)' }}
             >
               💾 ذخیره
             </button>
             <button
               onClick={() => setShowFirmForm(false)}
-              className="bg-white border-2 border-[#E5EBF3] hover:border-[#A9C1FA] text-[#6B7A94] hover:text-[#3F7CFF] px-7 py-3 rounded-[12px] text-sm font-bold transition-all"
+              className="bg-white border-2 border-[#E5EBF3] hover:border-[#A9C1FA] text-[#6B7A94] px-7 py-3 rounded-[12px] text-sm font-bold transition-all"
             >
               ✕ لغو
             </button>
@@ -452,7 +508,7 @@ export default function PropPage() {
               <select
                 value={selectedFirmId || ''}
                 onChange={(e) => setSelectedFirmId(Number(e.target.value))}
-                className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[12px] px-4 py-3 text-[#1A2B47] text-sm font-semibold focus:border-[#13AE81] focus:bg-white focus:outline-none"
+                className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[12px] px-4 py-3 text-[#1A2B47] text-sm font-bold focus:border-[#13AE81] focus:bg-white focus:outline-none cursor-pointer"
               >
                 <option value="">— انتخاب —</option>
                 {firms.map((f) => (
@@ -485,63 +541,39 @@ export default function PropPage() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
             <div>
               <label className="text-[12px] text-[#6B7A94] font-bold block mb-1.5">موجودی اولیه ($)</label>
-              <input
-                type="number"
-                value={initialBalance}
-                onChange={(e) => setInitialBalance(e.target.value)}
-                className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#13AE81] focus:bg-white focus:outline-none"
-              />
+              <input type="number" value={initialBalance} onChange={(e) => setInitialBalance(e.target.value)}
+                className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#13AE81] focus:outline-none" />
             </div>
             <div>
               <label className="text-[12px] text-[#6B7A94] font-bold block mb-1.5">هدف سود ($)</label>
-              <input
-                type="number"
-                value={profitTarget}
-                onChange={(e) => setProfitTarget(e.target.value)}
-                className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#13AE81] focus:bg-white focus:outline-none"
-              />
+              <input type="number" value={profitTarget} onChange={(e) => setProfitTarget(e.target.value)}
+                className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#13AE81] focus:outline-none" />
             </div>
             <div>
               <label className="text-[12px] text-[#6B7A94] font-bold block mb-1.5">DD روزانه ($)</label>
-              <input
-                type="number"
-                value={maxDailyDd}
-                onChange={(e) => setMaxDailyDd(e.target.value)}
-                className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#13AE81] focus:bg-white focus:outline-none"
-              />
+              <input type="number" value={maxDailyDd} onChange={(e) => setMaxDailyDd(e.target.value)}
+                className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#13AE81] focus:outline-none" />
             </div>
             <div>
               <label className="text-[12px] text-[#6B7A94] font-bold block mb-1.5">DD کلی ($)</label>
-              <input
-                type="number"
-                value={maxTotalDd}
-                onChange={(e) => setMaxTotalDd(e.target.value)}
-                className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#13AE81] focus:bg-white focus:outline-none"
-              />
+              <input type="number" value={maxTotalDd} onChange={(e) => setMaxTotalDd(e.target.value)}
+                className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#13AE81] focus:outline-none" />
             </div>
             <div>
               <label className="text-[12px] text-[#6B7A94] font-bold block mb-1.5">حداقل روزها</label>
-              <input
-                type="number"
-                value={minTradingDays}
-                onChange={(e) => setMinTradingDays(e.target.value)}
-                className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#13AE81] focus:bg-white focus:outline-none"
-              />
+              <input type="number" value={minTradingDays} onChange={(e) => setMinTradingDays(e.target.value)}
+                className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#13AE81] focus:outline-none" />
             </div>
           </div>
 
           <div className="flex gap-3 pt-4 border-t border-[#E5EBF3]">
-            <button
-              onClick={handleCreateAccount}
+            <button onClick={handleCreateAccount}
               className="text-white px-7 py-3 rounded-[12px] text-sm font-extrabold"
-              style={{ background: 'linear-gradient(135deg, #13AE81, #4DD9A9)' }}
-            >
+              style={{ background: 'linear-gradient(135deg, #13AE81, #4DD9A9)' }}>
               💾 ذخیره اکانت
             </button>
-            <button
-              onClick={() => setShowAccountForm(false)}
-              className="bg-white border-2 border-[#E5EBF3] hover:border-[#A9C1FA] text-[#6B7A94] px-7 py-3 rounded-[12px] text-sm font-bold transition-all"
-            >
+            <button onClick={() => setShowAccountForm(false)}
+              className="bg-white border-2 border-[#E5EBF3] hover:border-[#A9C1FA] text-[#6B7A94] px-7 py-3 rounded-[12px] text-sm font-bold transition-all">
               ✕ لغو
             </button>
           </div>
@@ -549,13 +581,11 @@ export default function PropPage() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* ستون شرکت‌ها */}
+        {/* شرکت‌ها */}
         <div className="lg:col-span-1">
           <div className="bg-white border border-[#E5EBF3] rounded-[22px] p-6 shadow-md">
             <div className="flex items-center gap-3 mb-5 pb-4 border-b border-[#E5EBF3]">
-              <div className="w-11 h-11 rounded-[14px] bg-[#EDF3FF] flex items-center justify-center text-xl">
-                🏢
-              </div>
+              <div className="w-11 h-11 rounded-[14px] bg-[#EDF3FF] flex items-center justify-center text-xl">🏢</div>
               <div>
                 <h3 className="text-base font-extrabold text-[#1A2B47]">شرکت‌های پراپ</h3>
                 <p className="text-[12px] text-[#6B7A94] mt-0.5">{firms.length} شرکت</p>
@@ -575,26 +605,19 @@ export default function PropPage() {
                       <button
                         onClick={() => toggleFirm(firm.id)}
                         className={`w-full text-right p-3.5 rounded-[14px] border-2 transition-all flex justify-between items-center ${
-                          isExpanded
-                            ? 'bg-[#EDF3FF] border-[#3F7CFF]'
-                            : 'bg-white border-[#E5EBF3] hover:border-[#A9C1FA]'
+                          isExpanded ? 'bg-[#EDF3FF] border-[#3F7CFF]' : 'bg-white border-[#E5EBF3] hover:border-[#A9C1FA]'
                         }`}
                       >
-                        <div className="flex items-center gap-2">
-                          <span className="text-[15px] font-extrabold text-[#1A2B47]">🏢 {firm.name}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[11px] text-[#6B7A94] font-bold">
-                            {firmAccounts.length} اکانت
-                          </span>
-                          <span className="text-[#3F7CFF] text-xs">{isExpanded ? '▼' : '◀'}</span>
-                        </div>
+                        <span className="text-[15px] font-extrabold text-[#1A2B47]">🏢 {firm.name}</span>
+                        <span className="text-[11px] text-[#6B7A94] font-bold">
+                          {firmAccounts.length} اکانت {isExpanded ? '▼' : '◀'}
+                        </span>
                       </button>
 
                       {isExpanded && (
                         <div className="mt-2 mr-3 space-y-1.5">
                           {firmAccounts.length === 0 ? (
-                            <div className="text-[#9AA8BF] text-[12px] py-3 pr-3 text-center bg-[#F8FAFF] rounded-[10px]">
+                            <div className="text-[#9AA8BF] text-[12px] py-3 text-center bg-[#F8FAFF] rounded-[10px]">
                               اکانتی ندارد
                             </div>
                           ) : (
@@ -630,15 +653,13 @@ export default function PropPage() {
           </div>
         </div>
 
-        {/* ستون جزئیات */}
+        {/* جزئیات */}
         <div className="lg:col-span-2">
           {accountDetail ? (
             <div className="bg-white border border-[#E5EBF3] rounded-[22px] p-6 shadow-md">
               <div className="flex items-center gap-3 mb-5 pb-4 border-b border-[#E5EBF3]">
                 <div className="w-11 h-11 rounded-[14px] flex items-center justify-center text-xl text-white"
-                  style={{ background: 'linear-gradient(135deg, #3F7CFF, #5B8DEF)' }}>
-                  🔍
-                </div>
+                  style={{ background: 'linear-gradient(135deg, #3F7CFF, #5B8DEF)' }}>🔍</div>
                 <div>
                   <h3 className="text-base font-extrabold text-[#1A2B47]">
                     {accountDetail.account_label} — {accountDetail.firm_name}
@@ -652,67 +673,51 @@ export default function PropPage() {
                   const stageColor = getStageColor(stage.stage_type);
                   return (
                     <div key={stage.id} className={`rounded-[18px] border-2 p-5 ${stageColor.border} ${stageColor.bg}`}>
-                      {/* هدر مرحله */}
                       <div className="flex justify-between items-center mb-5 flex-wrap gap-3">
                         <div className="flex items-center gap-3">
-                          <span className="text-xl font-extrabold text-[#1A2B47]">
-                            {getStageTypeLabel(stage.stage_type)}
-                          </span>
+                          <span className="text-xl font-extrabold text-[#1A2B47]">{getStageTypeLabel(stage.stage_type)}</span>
                           {getStatusBadge(stage.status)}
                         </div>
                         <div className="flex gap-2 flex-wrap">
-                          <button
-                            onClick={() => loadStageTrades(stage.id)}
-                            className="bg-white border border-[#E5EBF3] text-[#1A2B47] hover:border-[#3F7CFF] hover:text-[#3F7CFF] px-4 py-2 rounded-[10px] text-[12px] font-bold transition-all shadow-sm"
-                          >
+                          <button onClick={() => loadStageTrades(stage.id)}
+                            className="bg-white border border-[#E5EBF3] text-[#1A2B47] hover:border-[#3F7CFF] hover:text-[#3F7CFF] px-4 py-2 rounded-[10px] text-[12px] font-bold transition-all shadow-sm">
                             📋 معاملات
                           </button>
-                          <button
-                            onClick={() => startEditStage(stage)}
-                            className="bg-white border border-[#E5EBF3] text-[#1A2B47] hover:border-[#7959D6] hover:text-[#7959D6] px-4 py-2 rounded-[10px] text-[12px] font-bold transition-all shadow-sm"
-                          >
+                          <button onClick={() => startEditStage(stage)}
+                            className="bg-white border border-[#E5EBF3] text-[#1A2B47] hover:border-[#7959D6] hover:text-[#7959D6] px-4 py-2 rounded-[10px] text-[12px] font-bold transition-all shadow-sm">
                             ✏️ ویرایش قوانین
                           </button>
                           {stage.status === 'active' && stage.stage_type !== 'funded_real' && (
                             <>
-                              <button
-                                onClick={() => handleOpenPassModal(stage)}
-                                className="text-white px-4 py-2 rounded-[10px] text-[12px] font-extrabold shadow-[0_4px_12px_rgba(19,174,129,0.3)] hover:shadow-[0_6px_16px_rgba(19,174,129,0.4)] transition-all"
-                                style={{ background: 'linear-gradient(135deg, #13AE81, #4DD9A9)' }}
-                              >
+                              <button onClick={() => handleOpenPassModal(stage)}
+                                className="text-white px-4 py-2 rounded-[10px] text-[12px] font-extrabold shadow-[0_4px_12px_rgba(19,174,129,0.3)]"
+                                style={{ background: 'linear-gradient(135deg, #13AE81, #4DD9A9)' }}>
                                 ✅ بررسی و پاس
                               </button>
-                              <button
-                                onClick={() => handleOpenFailModal(stage)}
-                                className="text-white px-4 py-2 rounded-[10px] text-[12px] font-extrabold shadow-[0_4px_12px_rgba(228,93,114,0.3)] hover:shadow-[0_6px_16px_rgba(228,93,114,0.4)] transition-all"
-                                style={{ background: 'linear-gradient(135deg, #E45D72, #F0A6B2)' }}
-                              >
+                              <button onClick={() => handleOpenFailModal(stage)}
+                                className="text-white px-4 py-2 rounded-[10px] text-[12px] font-extrabold shadow-[0_4px_12px_rgba(228,93,114,0.3)]"
+                                style={{ background: 'linear-gradient(135deg, #E45D72, #F0A6B2)' }}>
                                 ❌ فیل
                               </button>
                             </>
                           )}
                           {stage.stage_type === 'funded_real' && stage.status !== 'failed' && stage.status !== 'closed' && (
-  <>
-    <button
-      onClick={() => handleWithdraw(stage.id)}
-      className="text-white px-4 py-2 rounded-[10px] text-[12px] font-extrabold shadow-[0_4px_12px_rgba(63,124,255,0.3)] hover:shadow-[0_6px_16px_rgba(63,124,255,0.4)] transition-all"
-      style={{ background: 'linear-gradient(135deg, #3F7CFF, #5B8DEF)' }}
-    >
-      💰 برداشت
-    </button>
-    <button
-      onClick={() => handleOpenFailModal(stage)}
-      className="text-white px-4 py-2 rounded-[10px] text-[12px] font-extrabold"
-      style={{ background: 'linear-gradient(135deg, #E45D72, #F0A6B2)' }}
-    >
-      ❌ فیل
-    </button>
-  </>
-)}
+                            <>
+                              <button onClick={() => handleWithdraw(stage.id)}
+                                className="text-white px-4 py-2 rounded-[10px] text-[12px] font-extrabold shadow-[0_4px_12px_rgba(63,124,255,0.3)]"
+                                style={{ background: 'linear-gradient(135deg, #3F7CFF, #5B8DEF)' }}>
+                                💰 برداشت
+                              </button>
+                              <button onClick={() => handleOpenFailModal(stage)}
+                                className="text-white px-4 py-2 rounded-[10px] text-[12px] font-extrabold"
+                                style={{ background: 'linear-gradient(135deg, #E45D72, #F0A6B2)' }}>
+                                ❌ فیل
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
 
-                      {/* اطلاعات مرحله */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {stage.initial_balance !== null && (
                           <div className="bg-white rounded-[12px] p-3 border border-white/60">
@@ -738,12 +743,6 @@ export default function PropPage() {
                             <div className="text-[16px] font-extrabold text-[#E45D72]">${stage.max_total_dd}</div>
                           </div>
                         )}
-                        {stage.final_balance !== null && (
-                          <div className="bg-white rounded-[12px] p-3 border border-white/60">
-                            <div className="text-[10px] text-[#6B7A94] font-bold mb-1">موجودی نهایی</div>
-                            <div className="text-[16px] font-extrabold text-[#1A2B47]">${stage.final_balance}</div>
-                          </div>
-                        )}
                         {stage.stage_type === 'funded_real' && (
                           <>
                             <div className="bg-white rounded-[12px] p-3 border border-white/60">
@@ -760,7 +759,6 @@ export default function PropPage() {
                         )}
                       </div>
 
-                      {/* دلیل فیل */}
                       {stage.failure_reason && (
                         <div className="mt-4 bg-[#FFEDF0] border border-[#F0A6B2] text-[#E45D72] p-3 rounded-[12px] text-[12px] font-bold">
                           ❌ دلیل فیل: {stage.failure_reason}
@@ -768,7 +766,6 @@ export default function PropPage() {
                         </div>
                       )}
 
-                      {/* فرم ویرایش قوانین */}
                       {editingStage === stage.id && (
                         <div className="mt-5 bg-white border-2 border-[#7959D6] rounded-[14px] p-5">
                           <h4 className="text-[14px] font-extrabold text-[#1A2B47] mb-4">✏️ ویرایش قوانین مرحله</h4>
@@ -819,7 +816,7 @@ export default function PropPage() {
                               💾 ذخیره
                             </button>
                             <button onClick={cancelEditStage}
-                              className="bg-white border-2 border-[#E5EBF3] text-[#6B7A94] px-5 py-2.5 rounded-[10px] text-[12px] font-bold hover:border-[#A9C1FA]">
+                              className="bg-white border-2 border-[#E5EBF3] text-[#6B7A94] px-5 py-2.5 rounded-[10px] text-[12px] font-bold">
                               ✕ لغو
                             </button>
                           </div>
@@ -846,20 +843,14 @@ export default function PropPage() {
           <div className="bg-white rounded-[22px] max-w-4xl w-full max-h-[85vh] overflow-hidden shadow-2xl">
             <div className="flex justify-between items-center p-6 border-b border-[#E5EBF3]">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-[14px] bg-[#EDF3FF] flex items-center justify-center text-xl">
-                  📋
-                </div>
+                <div className="w-11 h-11 rounded-[14px] bg-[#EDF3FF] flex items-center justify-center text-xl">📋</div>
                 <div>
                   <h3 className="text-base font-extrabold text-[#1A2B47]">معاملات مرحله</h3>
                   <p className="text-[12px] text-[#6B7A94] mt-0.5">{stageTrades.length} معامله</p>
                 </div>
               </div>
-              <button
-                onClick={() => { setSelectedStage(null); setStageTrades([]); }}
-                className="text-[#6B7A94] hover:text-[#E45D72] text-xl font-bold w-9 h-9 rounded-lg hover:bg-[#FFEDF0] transition-all"
-              >
-                ✕
-              </button>
+              <button onClick={() => { setSelectedStage(null); setStageTrades([]); }}
+                className="text-[#6B7A94] hover:text-[#E45D72] text-xl font-bold w-9 h-9 rounded-lg hover:bg-[#FFEDF0] transition-all">✕</button>
             </div>
 
             <div className="overflow-y-auto max-h-[calc(85vh-100px)] p-6">
@@ -867,12 +858,12 @@ export default function PropPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-[#F5F7FB]">
-                      <th className="text-right px-4 py-3.5 text-[11px] text-[#6B7A94] font-extrabold uppercase rounded-r-[14px]">#</th>
-                      <th className="text-right px-4 py-3.5 text-[11px] text-[#6B7A94] font-extrabold uppercase">نماد</th>
-                      <th className="text-right px-4 py-3.5 text-[11px] text-[#6B7A94] font-extrabold uppercase">جهت</th>
-                      <th className="text-right px-4 py-3.5 text-[11px] text-[#6B7A94] font-extrabold uppercase">حجم</th>
-                      <th className="text-right px-4 py-3.5 text-[11px] text-[#6B7A94] font-extrabold uppercase">سود/زیان</th>
-                      <th className="text-right px-4 py-3.5 text-[11px] text-[#6B7A94] font-extrabold uppercase rounded-l-[14px]">تاریخ</th>
+                      <th className="text-right px-4 py-3.5 text-[11px] text-[#6B7A94] font-extrabold rounded-r-[14px]">#</th>
+                      <th className="text-right px-4 py-3.5 text-[11px] text-[#6B7A94] font-extrabold">نماد</th>
+                      <th className="text-right px-4 py-3.5 text-[11px] text-[#6B7A94] font-extrabold">جهت</th>
+                      <th className="text-right px-4 py-3.5 text-[11px] text-[#6B7A94] font-extrabold">حجم</th>
+                      <th className="text-right px-4 py-3.5 text-[11px] text-[#6B7A94] font-extrabold">سود/زیان</th>
+                      <th className="text-right px-4 py-3.5 text-[11px] text-[#6B7A94] font-extrabold rounded-l-[14px]">تاریخ</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -906,10 +897,8 @@ export default function PropPage() {
           <div className="bg-white rounded-[22px] max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex justify-between items-center p-6 border-b border-[#E5EBF3]">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-[14px] flex items-center justify-center text-xl"
-                  style={{ background: 'linear-gradient(135deg, #13AE81, #4DD9A9)' }}>
-                  ✅
-                </div>
+                <div className="w-11 h-11 rounded-[14px] flex items-center justify-center text-xl text-white"
+                  style={{ background: 'linear-gradient(135deg, #13AE81, #4DD9A9)' }}>✅</div>
                 <div>
                   <h3 className="text-base font-extrabold text-[#1A2B47]">
                     بررسی و پاس مرحله {passingStage.stage_type === 'stage_1' ? 'اول' : 'دوم'}
@@ -921,7 +910,6 @@ export default function PropPage() {
             </div>
 
             <div className="p-6 space-y-4">
-              {/* وضعیت */}
               <div className={`rounded-[14px] p-4 border-2 ${
                 passProgress.suggested_status === 'ready_to_pass'
                   ? 'bg-[#E5F8F1] border-[#A8E6CF]'
@@ -940,7 +928,6 @@ export default function PropPage() {
                 </div>
               </div>
 
-              {/* متریک‌ها */}
               <div className="space-y-3">
                 <div className="bg-[#F8FAFF] border border-[#E5EBF3] rounded-[14px] p-4">
                   <div className="flex justify-between mb-2">
@@ -950,7 +937,7 @@ export default function PropPage() {
                     </span>
                   </div>
                   <div className="h-2 bg-white rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full transition-all ${passProgress.target_reached ? 'bg-gradient-to-r from-[#13AE81] to-[#4DD9A9]' : 'bg-gradient-to-r from-[#3F7CFF] to-[#5B8DEF]'}`}
+                    <div className={`h-full rounded-full ${passProgress.target_reached ? 'bg-gradient-to-r from-[#13AE81] to-[#4DD9A9]' : 'bg-gradient-to-r from-[#3F7CFF] to-[#5B8DEF]'}`}
                       style={{ width: `${Math.min(passProgress.profit_progress_percent, 100)}%` }} />
                   </div>
                 </div>
@@ -963,7 +950,7 @@ export default function PropPage() {
                     </span>
                   </div>
                   <div className="h-2 bg-white rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full transition-all ${passProgress.daily_dd_violated ? 'bg-gradient-to-r from-[#E45D72] to-[#F0A6B2]' : 'bg-gradient-to-r from-[#3F7CFF] to-[#5B8DEF]'}`}
+                    <div className={`h-full rounded-full ${passProgress.daily_dd_violated ? 'bg-gradient-to-r from-[#E45D72] to-[#F0A6B2]' : 'bg-gradient-to-r from-[#3F7CFF] to-[#5B8DEF]'}`}
                       style={{ width: `${Math.min(passProgress.daily_dd_progress_percent, 100)}%` }} />
                   </div>
                 </div>
@@ -976,7 +963,7 @@ export default function PropPage() {
                     </span>
                   </div>
                   <div className="h-2 bg-white rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full transition-all ${passProgress.total_dd_violated ? 'bg-gradient-to-r from-[#E45D72] to-[#F0A6B2]' : 'bg-gradient-to-r from-[#3F7CFF] to-[#5B8DEF]'}`}
+                    <div className={`h-full rounded-full ${passProgress.total_dd_violated ? 'bg-gradient-to-r from-[#E45D72] to-[#F0A6B2]' : 'bg-gradient-to-r from-[#3F7CFF] to-[#5B8DEF]'}`}
                       style={{ width: `${Math.min(passProgress.total_dd_progress_percent, 100)}%` }} />
                   </div>
                 </div>
@@ -989,56 +976,52 @@ export default function PropPage() {
                 </div>
               </div>
 
-              {/* قوانین مرحله بعدی */}
               {passProgress.suggested_status !== 'failed_daily_dd' && passProgress.suggested_status !== 'failed_total_dd' && (
-                <>
-                  <div className="pt-4 border-t border-[#E5EBF3]">
-                    <h4 className="text-[14px] font-extrabold text-[#1A2B47] mb-4">⚙️ قوانین مرحله‌ی بعدی</h4>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[11px] text-[#6B7A94] font-bold block mb-1.5">هدف سود ($)</label>
-                        <input type="number" value={nextStageRules.profit_target}
-                          onChange={(e) => setNextStageRules({ ...nextStageRules, profit_target: e.target.value })}
-                          className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#13AE81] focus:bg-white focus:outline-none" />
-                      </div>
-                      <div>
-                        <label className="text-[11px] text-[#6B7A94] font-bold block mb-1.5">DD روزانه ($)</label>
-                        <input type="number" value={nextStageRules.max_daily_dd}
-                          onChange={(e) => setNextStageRules({ ...nextStageRules, max_daily_dd: e.target.value })}
-                          className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#13AE81] focus:bg-white focus:outline-none" />
-                      </div>
-                      <div>
-                        <label className="text-[11px] text-[#6B7A94] font-bold block mb-1.5">DD کلی ($)</label>
-                        <input type="number" value={nextStageRules.max_total_dd}
-                          onChange={(e) => setNextStageRules({ ...nextStageRules, max_total_dd: e.target.value })}
-                          className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#13AE81] focus:bg-white focus:outline-none" />
-                      </div>
-                      <div>
-                        <label className="text-[11px] text-[#6B7A94] font-bold block mb-1.5">حداقل روزها</label>
-                        <input type="number" value={nextStageRules.min_trading_days}
-                          onChange={(e) => setNextStageRules({ ...nextStageRules, min_trading_days: e.target.value })}
-                          className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#13AE81] focus:bg-white focus:outline-none" />
-                      </div>
-                      <div>
-                        <label className="text-[11px] text-[#6B7A94] font-bold block mb-1.5">موجودی اولیه ($)</label>
-                        <input type="number" value={nextStageRules.initial_balance}
-                          onChange={(e) => setNextStageRules({ ...nextStageRules, initial_balance: e.target.value })}
-                          className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#13AE81] focus:bg-white focus:outline-none" />
-                      </div>
-                      {passingStage.stage_type === 'stage_2' && (
-                        <div>
-                          <label className="text-[11px] text-[#6B7A94] font-bold block mb-1.5">درصد سهم کاربر</label>
-                          <input type="number" value={nextStageRules.profit_share_percentage}
-                            onChange={(e) => setNextStageRules({ ...nextStageRules, profit_share_percentage: e.target.value })}
-                            className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#13AE81] focus:bg-white focus:outline-none" />
-                        </div>
-                      )}
+                <div className="pt-4 border-t border-[#E5EBF3]">
+                  <h4 className="text-[14px] font-extrabold text-[#1A2B47] mb-4">⚙️ قوانین مرحله‌ی بعدی</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] text-[#6B7A94] font-bold block mb-1.5">هدف سود ($)</label>
+                      <input type="number" value={nextStageRules.profit_target}
+                        onChange={(e) => setNextStageRules({ ...nextStageRules, profit_target: e.target.value })}
+                        className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#13AE81] focus:outline-none" />
                     </div>
+                    <div>
+                      <label className="text-[11px] text-[#6B7A94] font-bold block mb-1.5">DD روزانه ($)</label>
+                      <input type="number" value={nextStageRules.max_daily_dd}
+                        onChange={(e) => setNextStageRules({ ...nextStageRules, max_daily_dd: e.target.value })}
+                        className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#13AE81] focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-[#6B7A94] font-bold block mb-1.5">DD کلی ($)</label>
+                      <input type="number" value={nextStageRules.max_total_dd}
+                        onChange={(e) => setNextStageRules({ ...nextStageRules, max_total_dd: e.target.value })}
+                        className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#13AE81] focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-[#6B7A94] font-bold block mb-1.5">حداقل روزها</label>
+                      <input type="number" value={nextStageRules.min_trading_days}
+                        onChange={(e) => setNextStageRules({ ...nextStageRules, min_trading_days: e.target.value })}
+                        className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#13AE81] focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-[#6B7A94] font-bold block mb-1.5">موجودی اولیه ($)</label>
+                      <input type="number" value={nextStageRules.initial_balance}
+                        onChange={(e) => setNextStageRules({ ...nextStageRules, initial_balance: e.target.value })}
+                        className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#13AE81] focus:outline-none" />
+                    </div>
+                    {passingStage.stage_type === 'stage_2' && (
+                      <div>
+                        <label className="text-[11px] text-[#6B7A94] font-bold block mb-1.5">درصد سهم کاربر</label>
+                        <input type="number" value={nextStageRules.profit_share_percentage}
+                          onChange={(e) => setNextStageRules({ ...nextStageRules, profit_share_percentage: e.target.value })}
+                          className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[10px] px-3 py-2.5 text-[#1A2B47] text-sm font-bold focus:border-[#13AE81] focus:outline-none" />
+                      </div>
+                    )}
                   </div>
-                </>
+                </div>
               )}
 
-              {/* دکمه‌ها */}
               <div className="flex gap-3 pt-4 border-t border-[#E5EBF3]">
                 <button onClick={handleConfirmPass}
                   disabled={passProgress.suggested_status === 'failed_daily_dd' || passProgress.suggested_status === 'failed_total_dd'}
@@ -1062,10 +1045,8 @@ export default function PropPage() {
           <div className="bg-white rounded-[22px] max-w-md w-full shadow-2xl">
             <div className="flex justify-between items-center p-6 border-b border-[#E5EBF3]">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-[14px] flex items-center justify-center text-xl"
-                  style={{ background: 'linear-gradient(135deg, #E45D72, #F0A6B2)' }}>
-                  ❌
-                </div>
+                <div className="w-11 h-11 rounded-[14px] flex items-center justify-center text-xl text-white"
+                  style={{ background: 'linear-gradient(135deg, #E45D72, #F0A6B2)' }}>❌</div>
                 <div>
                   <h3 className="text-base font-extrabold text-[#1A2B47]">فیل کردن مرحله</h3>
                   <p className="text-[12px] text-[#6B7A94] mt-0.5">دلیل را انتخاب کنید</p>
@@ -1080,7 +1061,7 @@ export default function PropPage() {
                 <select
                   value={failReason}
                   onChange={(e) => setFailReason(e.target.value)}
-                  className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[12px] px-4 py-3 text-[#1A2B47] text-sm font-bold focus:border-[#E45D72] focus:bg-white focus:outline-none cursor-pointer"
+                  className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[12px] px-4 py-3 text-[#1A2B47] text-sm font-bold focus:border-[#E45D72] focus:outline-none cursor-pointer"
                 >
                   <option value="max_daily_dd_exceeded">نقض DD روزانه</option>
                   <option value="max_total_dd_exceeded">نقض DD کلی</option>
@@ -1099,7 +1080,7 @@ export default function PropPage() {
                   onChange={(e) => setFailDetails(e.target.value)}
                   placeholder="توضیحات بیشتر..."
                   rows={3}
-                  className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[12px] px-4 py-3 text-[#1A2B47] text-sm font-medium focus:border-[#E45D72] focus:bg-white focus:outline-none resize-none"
+                  className="w-full bg-[#F8FAFF] border-2 border-[#E5EBF3] rounded-[12px] px-4 py-3 text-[#1A2B47] text-sm font-medium focus:border-[#E45D72] focus:outline-none resize-none"
                 />
               </div>
 
