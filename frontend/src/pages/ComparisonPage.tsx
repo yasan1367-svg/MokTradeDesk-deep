@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import ComparisonBarChart from '../components/charts/ComparisonBarChart';
+import ComparisonRadarChart from '../components/charts/ComparisonRadarChart';
+
 import {
   getAllVersions,
   getStrategies,
@@ -301,6 +304,78 @@ export default function ComparisonPage() {
                 </tbody>
               </table>
             </div>
+            {/* ═══════════════════════════════════════════
+    نمودارهای مقایسه
+═══════════════════════════════════════════ */}
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <div className="bg-white border border-[#E5EBF3] rounded-[22px] p-6 shadow-md">
+    <div className="flex items-center gap-3 mb-5 pb-4 border-b border-[#E5EBF3]">
+      <div className="w-11 h-11 rounded-[14px] bg-[#EDF3FF] flex items-center justify-center text-xl">
+        📊
+      </div>
+      <div>
+        <h3 className="text-base font-extrabold text-[#1A2B47]">مقایسه‌ی نرخ برد</h3>
+        <p className="text-[12px] text-[#6B7A94] mt-0.5">درصد معاملات برنده</p>
+      </div>
+    </div>
+    <ComparisonBarChart items={comparison.items} metric="win_rate" />
+  </div>
+
+  <div className="bg-white border border-[#E5EBF3] rounded-[22px] p-6 shadow-md">
+    <div className="flex items-center gap-3 mb-5 pb-4 border-b border-[#E5EBF3]">
+      <div className="w-11 h-11 rounded-[14px] bg-[#E5F8F1] flex items-center justify-center text-xl">
+        💰
+      </div>
+      <div>
+        <h3 className="text-base font-extrabold text-[#1A2B47]">مقایسه‌ی سود خالص</h3>
+        <p className="text-[12px] text-[#6B7A94] mt-0.5">مجموع سود/زیان</p>
+      </div>
+    </div>
+    <ComparisonBarChart items={comparison.items} metric="net_pnl" />
+  </div>
+</div>
+
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <div className="bg-white border border-[#E5EBF3] rounded-[22px] p-6 shadow-md">
+    <div className="flex items-center gap-3 mb-5 pb-4 border-b border-[#E5EBF3]">
+      <div className="w-11 h-11 rounded-[14px] bg-[#F1ECFF] flex items-center justify-center text-xl">
+        🏆
+      </div>
+      <div>
+        <h3 className="text-base font-extrabold text-[#1A2B47]">مقایسه‌ی فاکتور سود</h3>
+        <p className="text-[12px] text-[#6B7A94] mt-0.5">سود کل / ضرر کل</p>
+      </div>
+    </div>
+    <ComparisonBarChart items={comparison.items} metric="profit_factor" />
+  </div>
+
+  <div className="bg-white border border-[#E5EBF3] rounded-[22px] p-6 shadow-md">
+    <div className="flex items-center gap-3 mb-5 pb-4 border-b border-[#E5EBF3]">
+      <div className="w-11 h-11 rounded-[14px] bg-[#FFEDF0] flex items-center justify-center text-xl">
+        ⚠️
+      </div>
+      <div>
+        <h3 className="text-base font-extrabold text-[#1A2B47]">مقایسه‌ی حداکثر DD</h3>
+        <p className="text-[12px] text-[#6B7A94] mt-0.5">کمتر بهتر</p>
+      </div>
+    </div>
+    <ComparisonBarChart items={comparison.items} metric="max_dd" />
+  </div>
+</div>
+
+{/* نمودار راداری */}
+<div className="bg-white border border-[#E5EBF3] rounded-[22px] p-6 shadow-md mb-6">
+  <div className="flex items-center gap-3 mb-5 pb-4 border-b border-[#E5EBF3]">
+    <div className="w-11 h-11 rounded-[14px] bg-[#EDF3FF] flex items-center justify-center text-xl">
+      🎯
+    </div>
+    <div>
+      <h3 className="text-base font-extrabold text-[#1A2B47]">مقایسه‌ی کلی متریک‌ها</h3>
+      <p className="text-[12px] text-[#6B7A94] mt-0.5">نمای راداری از تمام متریک‌ها</p>
+    </div>
+  </div>
+  <ComparisonRadarChart items={comparison.items} />
+</div>
           </div>
 
           {/* پیشنهاد هوشمند */}
