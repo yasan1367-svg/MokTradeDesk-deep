@@ -1,1 +1,1 @@
-from . import strategies, prop, personal, imports, analytics, trades, symbol_mappings
+from . import strategies, prop, personal, imports, analytics, trades, symbol_mappings, settings

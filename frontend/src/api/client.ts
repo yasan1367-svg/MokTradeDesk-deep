@@ -340,3 +340,18 @@ export const deleteSymbolMapping = (id: number) =>
 
 export const seedSymbolMappings = () =>
   api.post('/api/symbol-mappings/seed-defaults');
+
+// ─────────────────────────────────────────────
+// Settings
+// ─────────────────────────────────────────────
+export const getSettings = () => api.get('/api/settings/');
+
+export const updateSettings = (data: {
+  theme?: string;
+  font_size?: number;
+  timezone?: string;
+  currency?: string;
+  calendar?: string;
+  default_risk_percent?: number;
+  default_profit_share?: number;
+}) => api.patch('/api/settings/', data);

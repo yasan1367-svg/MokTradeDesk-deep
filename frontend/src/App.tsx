@@ -8,8 +8,9 @@ import PropPage from './pages/PropPage';
 import PersonalPage from './pages/PersonalPage';
 import ImportPage from './pages/ImportPage';
 import DashboardPage from './pages/DashboardPage';
+import SettingsPage from './pages/SettingsPage';
 
-type Page = 'dashboard' | 'analysis' | 'comparison' | 'strategy' | 'trades' | 'prop' | 'personal' | 'import';
+type Page = 'dashboard' | 'analysis' | 'comparison' | 'strategy' | 'trades' | 'prop' | 'personal' | 'import' | 'settings';
 
 const PAGE_TITLES: Record<Page, { title: string; subtitle: string }> = {
   dashboard: { title: '📊 داشبورد', subtitle: 'نمای کلی عملکرد معاملاتی' },
@@ -20,6 +21,7 @@ const PAGE_TITLES: Record<Page, { title: string; subtitle: string }> = {
   prop: { title: '🏢 پراپ', subtitle: 'مدیریت چالش‌های پراپ' },
   personal: { title: '🏦 شخصی', subtitle: 'معاملات شخصی و حسابداری' },
   import: { title: '📥 واردات', subtitle: 'واردات معاملات از فایل' },
+  settings: { title: '⚙️ تنظیمات', subtitle: 'تنظیمات نرم‌افزار' },
 };
 
 export default function App() {
@@ -57,6 +59,7 @@ export default function App() {
           {page === 'prop' && <PropPage />}
           {page === 'personal' && <PersonalPage />}
           {page === 'import' && <ImportPage />}
+          {page === 'settings' && <SettingsPage />}
         </div>
       </main>
     </div>

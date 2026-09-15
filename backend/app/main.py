@@ -5,6 +5,8 @@ import os
 
 from .core.database import engine, Base
 from .api import strategies, prop, personal, imports, analytics, trades, symbol_mappings
+from .api import settings as settings_api
+
 app = FastAPI(title="MokTradeDesk API", version="1.0")
 
 app.add_middleware(
@@ -34,6 +36,7 @@ app.include_router(imports.router, prefix="/api/imports", tags=["imports"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(trades.router, prefix="/api/trades", tags=["trades"])
 app.include_router(symbol_mappings.router, prefix="/api/symbol-mappings", tags=["symbol-mappings"])
+app.include_router(settings_api.router, prefix="/api/settings", tags=["settings"])
 
 @app.get("/")
 def root():
