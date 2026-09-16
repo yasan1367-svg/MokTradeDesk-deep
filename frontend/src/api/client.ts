@@ -166,6 +166,8 @@ export const updateStageRules = (
   }
 ) => api.patch(`/api/prop/stages/${stageId}/rules`, data);
 
+export const getActivePropStages = () => api.get('/api/prop/stages/all');
+
 // ─────────────────────────────────────────────
 // Strategy Management
 // ─────────────────────────────────────────────

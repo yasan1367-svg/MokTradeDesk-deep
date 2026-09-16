@@ -3,21 +3,41 @@ import StatCard from '../components/ui/StatCard';
 import { Card, CardHeader } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import ProgressBar from '../components/ui/ProgressBar';
-import { getAllVersions, getVersionAnalysis, getPropAccounts } from '../api/client';
+import {
+  getAllVersions,
+  getVersionAnalysis,
+  getVersionTrades,
+  getPropAccounts,
+  getActivePropStages,
+  checkPassReady,
+} from '../api/client';
 
 export default function DashboardPage() {
   const [versions, setVersions] = useState<any[]>([]);
   const [selectedVersionId, setSelectedVersionId] = useState<number | null>(null);
   const [analysis, setAnalysis] = useState<any>(null);
   const [propAccounts, setPropAccounts] = useState<any[]>([]);
+  const [activeStages, setActiveStages] = useState<any[]>([]);
+const [currentStageProgress, setCurrentStageProgress] = useState<any>(null);
 
   useEffect(() => {
-    getAllVersions().then((res) => {
-      setVersions(res.data);
-      if (res.data.length > 0) setSelectedVersionId(res.data[0].id);
-    });
-    getPropAccounts().then((res) => setPropAccounts(res.data));
-  }, []);
+  getAllVersions().then((res) => {
+    setVersions(res.data);
+    if (res.data.length > 0) setSelectedVersionId(res.data[0].id);
+  });
+
+  getPropAccounts().then((res) => setPropAccounts(res.data));
+
+  getActivePropStages().then((res) => {
+    const active = res.data.filter((s: any) => s.status === 'active');
+    setActiveStages(active);
+    if (active.length > 0) {
+      checkPassReady(active[0].id)
+        .then((progressRes) => setCurrentStageProgress(progressRes.data))
+        .catch(() => null);
+    }
+  });
+}, []);
 
   useEffect(() => {
     if (!selectedVersionId) return;
@@ -178,7 +198,158 @@ export default function DashboardPage() {
           </table>
         </div>
       </Card>
+{/* پراپ فعال */}
+{activeStages.length > 0 && currentStageProgress && (
+  <div className="bg-white border border-[#E5EBF3] rounded-[22px] p-6 shadow-md">
+    <div className="flex items-center justify-between gap-3 mb-5 pb-4 border-b border-[#E5EBF3]">
+      <div className="flex items-center gap-3">
+        <div
+          className="w-11 h-11 rounded-[14px] flex items-center justify-center text-xl text-white"
+          style={{ background: 'linear-gradient(135deg, #7959D6, #A78BFA)' }}
+        >
+          🏢
+        </div>
+        <div>
+          <h3 className="text-base font-extrabold text-[#1A2B47]">پراپ فعال</h3>
+          <p className="text-[12px] text-[#6B7A94] mt-0.5">{activeStages.length} مرحله‌ی فعال</p>
+        </div>
+      </div>
+    </div>
 
+    {activeStages.slice(0, 3).map((stage: any) => {
+      const isCurrentStage = stage.id === currentStageProgress.stage_id;
+      return (
+        <div
+          key={stage.id}
+          className={`mb-4 p-4 rounded-[14px] border-2 ${
+            isCurrentStage ? 'bg-[#EDF3FF] border-[#A9C1FA]' : 'bg-[#F8FAFF] border-[#E5EBF3]'
+          }`}
+        >
+          <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
+            <div>
+              <div className="text-[14px] font-extrabold text-[#1A2B47]">
+                {stage.firm_name} / {stage.account_label}
+              </div>
+              <div className="text-[12px] text-[#6B7A94] mt-0.5 font-semibold">
+                {stage.stage_label}
+              </div>
+            </div>
+            {isCurrentStage && currentStageProgress && (
+              <span
+                className={`text-[11px] font-bold px-3 py-1 rounded-full ${
+                  currentStageProgress.suggested_status === 'ready_to_pass'
+                    ? 'bg-[#E5F8F1] text-[#13AE81]'
+                    : currentStageProgress.suggested_status === 'failed_daily_dd' ||
+                      currentStageProgress.suggested_status === 'failed_total_dd'
+                    ? 'bg-[#FFEDF0] text-[#E45D72]'
+                    : 'bg-[#EDF3FF] text-[#3F7CFF]'
+                }`}
+              >
+                {currentStageProgress.suggested_status === 'ready_to_pass' && '✅ آماده‌ی پاس'}
+                {currentStageProgress.suggested_status === 'in_progress' && '⏳ در حال پیشرفت'}
+                {currentStageProgress.suggested_status === 'failed_daily_dd' && '❌ DD روزانه'}
+                {currentStageProgress.suggested_status === 'failed_total_dd' && '❌ DD کلی'}
+              </span>
+            )}
+          </div>
+
+          {isCurrentStage && currentStageProgress && (
+            <div className="space-y-3">
+              <div>
+                <div className="flex justify-between mb-1.5">
+                  <span className="text-[11px] text-[#6B7A94] font-bold">🎯 هدف سود</span>
+                  <span
+                    className={`text-[11px] font-extrabold ${
+                      currentStageProgress.target_reached ? 'text-[#13AE81]' : 'text-[#1A2B47]'
+                    }`}
+                  >
+                    {currentStageProgress.current_profit_percent}٪ /{' '}
+                    {currentStageProgress.profit_target_percent}٪
+                  </span>
+                </div>
+                <div className="h-2 bg-white rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${
+                      currentStageProgress.target_reached
+                        ? 'bg-gradient-to-r from-[#13AE81] to-[#4DD9A9]'
+                        : 'bg-gradient-to-r from-[#3F7CFF] to-[#5B8DEF]'
+                    }`}
+                    style={{
+                      width: `${Math.min(currentStageProgress.profit_progress_percent, 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between mb-1.5">
+                  <span className="text-[11px] text-[#6B7A94] font-bold">⚠️ DD روزانه</span>
+                  <span
+                    className={`text-[11px] font-extrabold ${
+                      currentStageProgress.daily_dd_violated ? 'text-[#E45D72]' : 'text-[#1A2B47]'
+                    }`}
+                  >
+                    {currentStageProgress.max_daily_dd_percent}٪ /{' '}
+                    {currentStageProgress.max_daily_dd_limit}٪
+                  </span>
+                </div>
+                <div className="h-2 bg-white rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${
+                      currentStageProgress.daily_dd_violated
+                        ? 'bg-gradient-to-r from-[#E45D72] to-[#F0A6B2]'
+                        : 'bg-gradient-to-r from-[#3F7CFF] to-[#5B8DEF]'
+                    }`}
+                    style={{
+                      width: `${Math.min(currentStageProgress.daily_dd_progress_percent, 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between mb-1.5">
+                  <span className="text-[11px] text-[#6B7A94] font-bold">📉 DD کلی</span>
+                  <span
+                    className={`text-[11px] font-extrabold ${
+                      currentStageProgress.total_dd_violated ? 'text-[#E45D72]' : 'text-[#1A2B47]'
+                    }`}
+                  >
+                    {currentStageProgress.max_total_dd_percent}٪ /{' '}
+                    {currentStageProgress.max_total_dd_limit}٪
+                  </span>
+                </div>
+                <div className="h-2 bg-white rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${
+                      currentStageProgress.total_dd_violated
+                        ? 'bg-gradient-to-r from-[#E45D72] to-[#F0A6B2]'
+                        : 'bg-gradient-to-r from-[#3F7CFF] to-[#5B8DEF]'
+                    }`}
+                    style={{
+                      width: `${Math.min(currentStageProgress.total_dd_progress_percent, 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center bg-white rounded-[10px] p-2.5 border border-[#E5EBF3]">
+                <span className="text-[11px] text-[#6B7A94] font-bold">📅 روزهای معاملاتی</span>
+                <span
+                  className={`text-[12px] font-extrabold ${
+                    currentStageProgress.days_met ? 'text-[#13AE81]' : 'text-[#1A2B47]'
+                  }`}
+                >
+                  {currentStageProgress.trading_days} / {currentStageProgress.min_trading_days}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    })}
+  </div>
+)}
       {/* پراپ + اهداف */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <Card>

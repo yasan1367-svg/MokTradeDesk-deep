@@ -113,7 +113,9 @@ export default function PropPage() {
     initial_balance: '',
     profit_share_percentage: '',
   });
-
+const [showProgressModal, setShowProgressModal] = useState(false);
+const [progressStage, setProgressStage] = useState<Stage | null>(null);
+const [stageProgressData, setStageProgressData] = useState<any>(null);
   const [editingStage, setEditingStage] = useState<number | null>(null);
   const [editRules, setEditRules] = useState({
     profit_target: '',
@@ -262,7 +264,16 @@ export default function PropPage() {
       setError(err.response?.data?.detail || 'خطا در بررسی مرحله');
     }
   };
-
+const handleOpenProgressModal = async (stage: Stage) => {
+  try {
+    const res = await checkPassReady(stage.id);
+    setStageProgressData(res.data);
+    setProgressStage(stage);
+    setShowProgressModal(true);
+  } catch (err: any) {
+    setError(err.response?.data?.detail || 'خطا در بررسی مرحله');
+  }
+};
   const handleConfirmPass = async () => {
     if (!passingStage || !passProgress) return;
     try {
@@ -679,43 +690,61 @@ export default function PropPage() {
                           {getStatusBadge(stage.status)}
                         </div>
                         <div className="flex gap-2 flex-wrap">
-                          <button onClick={() => loadStageTrades(stage.id)}
-                            className="bg-white border border-[#E5EBF3] text-[#1A2B47] hover:border-[#3F7CFF] hover:text-[#3F7CFF] px-4 py-2 rounded-[10px] text-[12px] font-bold transition-all shadow-sm">
-                            📋 معاملات
-                          </button>
-                          <button onClick={() => startEditStage(stage)}
-                            className="bg-white border border-[#E5EBF3] text-[#1A2B47] hover:border-[#7959D6] hover:text-[#7959D6] px-4 py-2 rounded-[10px] text-[12px] font-bold transition-all shadow-sm">
-                            ✏️ ویرایش قوانین
-                          </button>
-                          {stage.status === 'active' && stage.stage_type !== 'funded_real' && (
-                            <>
-                              <button onClick={() => handleOpenPassModal(stage)}
-                                className="text-white px-4 py-2 rounded-[10px] text-[12px] font-extrabold shadow-[0_4px_12px_rgba(19,174,129,0.3)]"
-                                style={{ background: 'linear-gradient(135deg, #13AE81, #4DD9A9)' }}>
-                                ✅ بررسی و پاس
-                              </button>
-                              <button onClick={() => handleOpenFailModal(stage)}
-                                className="text-white px-4 py-2 rounded-[10px] text-[12px] font-extrabold shadow-[0_4px_12px_rgba(228,93,114,0.3)]"
-                                style={{ background: 'linear-gradient(135deg, #E45D72, #F0A6B2)' }}>
-                                ❌ فیل
-                              </button>
-                            </>
-                          )}
-                          {stage.stage_type === 'funded_real' && stage.status !== 'failed' && stage.status !== 'closed' && (
-                            <>
-                              <button onClick={() => handleWithdraw(stage.id)}
-                                className="text-white px-4 py-2 rounded-[10px] text-[12px] font-extrabold shadow-[0_4px_12px_rgba(63,124,255,0.3)]"
-                                style={{ background: 'linear-gradient(135deg, #3F7CFF, #5B8DEF)' }}>
-                                💰 برداشت
-                              </button>
-                              <button onClick={() => handleOpenFailModal(stage)}
-                                className="text-white px-4 py-2 rounded-[10px] text-[12px] font-extrabold"
-                                style={{ background: 'linear-gradient(135deg, #E45D72, #F0A6B2)' }}>
-                                ❌ فیل
-                              </button>
-                            </>
-                          )}
-                        </div>
+  <button
+    onClick={() => handleOpenProgressModal(stage)}
+    className="bg-white border border-[#E5EBF3] text-[#1A2B47] hover:border-[#13AE81] hover:text-[#13AE81] px-4 py-2 rounded-[10px] text-[12px] font-bold transition-all shadow-sm"
+  >
+    📊 وضعیت کنونی
+  </button>
+  <button
+    onClick={() => loadStageTrades(stage.id)}
+    className="bg-white border border-[#E5EBF3] text-[#1A2B47] hover:border-[#3F7CFF] hover:text-[#3F7CFF] px-4 py-2 rounded-[10px] text-[12px] font-bold transition-all shadow-sm"
+  >
+    📋 معاملات
+  </button>
+  <button
+    onClick={() => startEditStage(stage)}
+    className="bg-white border border-[#E5EBF3] text-[#1A2B47] hover:border-[#7959D6] hover:text-[#7959D6] px-4 py-2 rounded-[10px] text-[12px] font-bold transition-all shadow-sm"
+  >
+    ✏️ ویرایش قوانین
+  </button>
+  {stage.status === 'active' && stage.stage_type !== 'funded_real' && (
+    <>
+      <button
+        onClick={() => handleOpenPassModal(stage)}
+        className="text-white px-4 py-2 rounded-[10px] text-[12px] font-extrabold shadow-[0_4px_12px_rgba(19,174,129,0.3)]"
+        style={{ background: 'linear-gradient(135deg, #13AE81, #4DD9A9)' }}
+      >
+        ✅ بررسی و پاس
+      </button>
+      <button
+        onClick={() => handleOpenFailModal(stage)}
+        className="text-white px-4 py-2 rounded-[10px] text-[12px] font-extrabold shadow-[0_4px_12px_rgba(228,93,114,0.3)]"
+        style={{ background: 'linear-gradient(135deg, #E45D72, #F0A6B2)' }}
+      >
+        ❌ فیل
+      </button>
+    </>
+  )}
+  {stage.stage_type === 'funded_real' && stage.status !== 'failed' && stage.status !== 'closed' && (
+    <>
+      <button
+        onClick={() => handleWithdraw(stage.id)}
+        className="text-white px-4 py-2 rounded-[10px] text-[12px] font-extrabold shadow-[0_4px_12px_rgba(63,124,255,0.3)]"
+        style={{ background: 'linear-gradient(135deg, #3F7CFF, #5B8DEF)' }}
+      >
+        💰 برداشت
+      </button>
+      <button
+        onClick={() => handleOpenFailModal(stage)}
+        className="text-white px-4 py-2 rounded-[10px] text-[12px] font-extrabold"
+        style={{ background: 'linear-gradient(135deg, #E45D72, #F0A6B2)' }}
+      >
+        ❌ فیل
+      </button>
+    </>
+  )}
+</div>
                       </div>
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -1093,6 +1122,128 @@ export default function PropPage() {
                 <button onClick={() => setShowFailModal(false)}
                   className="bg-white border-2 border-[#E5EBF3] text-[#6B7A94] px-6 py-3 rounded-[12px] font-bold text-sm">
                   ✕ لغو
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+            {/* ═════════════════════════════════════════════
+          مودال وضعیت کنونی
+      ═════════════════════════════════════════════ */}
+      {showProgressModal && progressStage && stageProgressData && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-[22px] max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex justify-between items-center p-6 border-b border-[#E5EBF3]">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-[14px] flex items-center justify-center text-xl text-white"
+                  style={{ background: 'linear-gradient(135deg, #13AE81, #4DD9A9)' }}>
+                  📊
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-[#1A2B47]">
+                    وضعیت کنونی {getStageTypeLabel(progressStage.stage_type)}
+                  </h3>
+                  <p className="text-[12px] text-[#6B7A94] mt-0.5">
+                    {stageProgressData.total_trades} معامله ثبت‌شده
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowProgressModal(false)}
+                className="text-[#6B7A94] text-xl w-9 h-9 rounded-lg hover:bg-[#F5F7FB]"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* وضعیت */}
+              <div className={`rounded-[14px] p-4 border-2 ${
+                progressStage.status === 'passed'
+                  ? 'bg-[#E5F8F1] border-[#A8E6CF]'
+                  : progressStage.status === 'failed'
+                  ? 'bg-[#FFEDF0] border-[#F0A6B2]'
+                  : stageProgressData.suggested_status === 'ready_to_pass'
+                  ? 'bg-[#E5F8F1] border-[#A8E6CF]'
+                  : 'bg-[#EDF3FF] border-[#A9C1FA]'
+              }`}>
+                <div className="font-extrabold text-[15px] text-[#1A2B47] mb-1">
+                  {progressStage.status === 'passed' && '✅ این مرحله پاس شده است'}
+                  {progressStage.status === 'failed' && '❌ این مرحله فیل شده است'}
+                  {progressStage.status === 'active' && stageProgressData.suggested_status === 'ready_to_pass' && '✅ آماده‌ی پاس کردن'}
+                  {progressStage.status === 'active' && stageProgressData.suggested_status === 'in_progress' && '⏳ در حال پیشرفت'}
+                  {progressStage.status === 'active' && stageProgressData.suggested_status === 'failed_daily_dd' && '❌ DD روزانه نقض شده'}
+                  {progressStage.status === 'active' && stageProgressData.suggested_status === 'failed_total_dd' && '❌ DD کلی نقض شده'}
+                </div>
+                <div className="text-[12px] text-[#6B7A94] font-semibold">
+                  سود فعلی: <span className="text-[#13AE81] font-extrabold">{stageProgressData.current_profit} $</span>
+                </div>
+              </div>
+
+              {/* هدف سود */}
+              <div className="bg-[#F8FAFF] border border-[#E5EBF3] rounded-[14px] p-4">
+                <div className="flex justify-between mb-2">
+                  <span className="text-[13px] text-[#1A2B47] font-bold">🎯 هدف سود</span>
+                  <span className={`font-extrabold text-[14px] ${stageProgressData.target_reached ? 'text-[#13AE81]' : 'text-[#1A2B47]'}`}>
+                    {stageProgressData.current_profit_percent}٪ / {stageProgressData.profit_target_percent}٪
+                  </span>
+                </div>
+                <div className="h-2 bg-white rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${stageProgressData.target_reached ? 'bg-gradient-to-r from-[#13AE81] to-[#4DD9A9]' : 'bg-gradient-to-r from-[#3F7CFF] to-[#5B8DEF]'}`}
+                    style={{ width: `${Math.min(stageProgressData.profit_progress_percent, 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* DD روزانه */}
+              <div className="bg-[#F8FAFF] border border-[#E5EBF3] rounded-[14px] p-4">
+                <div className="flex justify-between mb-2">
+                  <span className="text-[13px] text-[#1A2B47] font-bold">⚠️ DD روزانه</span>
+                  <span className={`font-extrabold text-[14px] ${stageProgressData.daily_dd_violated ? 'text-[#E45D72]' : 'text-[#1A2B47]'}`}>
+                    {stageProgressData.max_daily_dd_percent}٪ / {stageProgressData.max_daily_dd_limit}٪
+                  </span>
+                </div>
+                <div className="h-2 bg-white rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${stageProgressData.daily_dd_violated ? 'bg-gradient-to-r from-[#E45D72] to-[#F0A6B2]' : 'bg-gradient-to-r from-[#3F7CFF] to-[#5B8DEF]'}`}
+                    style={{ width: `${Math.min(stageProgressData.daily_dd_progress_percent, 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* DD کلی */}
+              <div className="bg-[#F8FAFF] border border-[#E5EBF3] rounded-[14px] p-4">
+                <div className="flex justify-between mb-2">
+                  <span className="text-[13px] text-[#1A2B47] font-bold">📉 DD کلی</span>
+                  <span className={`font-extrabold text-[14px] ${stageProgressData.total_dd_violated ? 'text-[#E45D72]' : 'text-[#1A2B47]'}`}>
+                    {stageProgressData.max_total_dd_percent}٪ / {stageProgressData.max_total_dd_limit}٪
+                  </span>
+                </div>
+                <div className="h-2 bg-white rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${stageProgressData.total_dd_violated ? 'bg-gradient-to-r from-[#E45D72] to-[#F0A6B2]' : 'bg-gradient-to-r from-[#3F7CFF] to-[#5B8DEF]'}`}
+                    style={{ width: `${Math.min(stageProgressData.total_dd_progress_percent, 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* روزهای معاملاتی */}
+              <div className="bg-[#F8FAFF] border border-[#E5EBF3] rounded-[14px] p-4 flex justify-between items-center">
+                <span className="text-[13px] text-[#1A2B47] font-bold">📅 روزهای معاملاتی</span>
+                <span className={`font-extrabold text-[15px] ${stageProgressData.days_met ? 'text-[#13AE81]' : 'text-[#1A2B47]'}`}>
+                  {stageProgressData.trading_days} / {stageProgressData.min_trading_days}
+                </span>
+              </div>
+
+              {/* دکمه‌ی بستن */}
+              <div className="pt-4 border-t border-[#E5EBF3]">
+                <button
+                  onClick={() => setShowProgressModal(false)}
+                  className="w-full bg-white border-2 border-[#E5EBF3] text-[#6B7A94] hover:border-[#A9C1FA] py-3 rounded-[12px] font-bold text-sm transition-all"
+                >
+                  ✕ بستن
                 </button>
               </div>
             </div>
