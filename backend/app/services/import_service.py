@@ -4,6 +4,7 @@ from typing import List, Dict, Any, Optional
 from bs4 import BeautifulSoup
 
 from ..models.strategy import Trade, TradeSource, TestType
+from ..utils.trade_metrics import calculate_r_multiple
 
 
 # ═════════════════════════════════════════════
@@ -46,19 +47,24 @@ class Soft4XImporter:
             if open_time is None:
                 continue
 
+            direction = self._get_direction(self._get_value(row, col_index.get("Type")))
+            open_price = float(self._get_value(row, col_index.get("Open Price"), 0) or 0)
+            close_price = float(self._get_value(row, col_index.get("Close Price"), 0) or 0)
+            sl = self._to_float(self._get_value(row, col_index.get("SL")))
+
             trade = {
                 "symbol": self.symbol,
                 "test_type": self.test_type,
-                "direction": self._get_direction(self._get_value(row, col_index.get("Type"))),
+                "direction": direction,
                 "open_time": open_time,
                 "close_time": close_time,
-                "open_price": float(self._get_value(row, col_index.get("Open Price"), 0) or 0),
-                "close_price": float(self._get_value(row, col_index.get("Close Price"), 0) or 0),
+                "open_price": open_price,
+                "close_price": close_price,
                 "size": float(self._get_value(row, col_index.get("Size"), 0) or 0),
-                "sl": self._to_float(self._get_value(row, col_index.get("SL"))),
+                "sl": sl,
                 "tp": self._to_float(self._get_value(row, col_index.get("TP"))),
                 "pnl": float(self._get_value(row, col_index.get("P/L"), 0) or 0),
-                "r_multiple": None,
+                "r_multiple": calculate_r_multiple(direction, open_price, close_price, sl),
                 "commission": self._to_float(self._get_value(row, col_index.get("Commission"))) or 0,
                 "swap": 0.0,
                 "entry_sequence": 1,
@@ -263,7 +269,7 @@ class MT4Importer:
                 "sl": sl,
                 "tp": tp,
                 "pnl": profit,
-                "r_multiple": None,
+                "r_multiple": calculate_r_multiple(direction, open_price, close_price, sl),
                 "commission": commission,
                 "swap": swap,
                 "entry_sequence": 1,

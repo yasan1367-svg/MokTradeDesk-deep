@@ -32,6 +32,7 @@ export default function ComparisonPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeDetailTab, setActiveDetailTab] = useState<'session' | 'weekday' | 'hour' | 'custom'>('session');
+  const [minTrades, setMinTrades] = useState<number>(20); // فیلتر هوشمند: حداقل تعداد معامله برای مقایسه
 
   useEffect(() => {
     loadData();
@@ -71,7 +72,7 @@ export default function ComparisonPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await compareVersionsWithDetails(selectedIds);
+      const res = await compareVersionsWithDetails(selectedIds, minTrades);
       setComparison(res.data);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'خطا در مقایسه');
@@ -126,7 +127,7 @@ export default function ComparisonPage() {
         </div>
 
         {/* فیلترها */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
           <div>
             <label className="text-[12px] text-[#6B7A94] font-semibold block mb-1.5">استراتژی</label>
             <select
@@ -152,6 +153,21 @@ export default function ComparisonPage() {
           </div>
         </div>
 
+        {/* فیلتر هوشمند: حداقل تعداد معامله */}
+        <div className="flex items-center gap-3 mb-5 bg-[#FFF8E5] border border-[#F0DBA6] rounded-[10px] px-4 py-2.5">
+          <label className="text-[12px] text-[#946A1E] font-bold whitespace-nowrap">
+            ⚠️ حداقل تعداد معامله برای ورود به مقایسه:
+          </label>
+          <input
+            type="number"
+            min={0}
+            value={minTrades}
+            onChange={(e) => setMinTrades(Math.max(0, Number(e.target.value)))}
+            className="w-24 bg-white border border-[#F0DBA6] rounded-[8px] px-3 py-1.5 text-[#946A1E] text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#F0DBA6]"
+          />
+          <span className="text-[11px] text-[#946A1E]">نسخه‌های کمتر از این تعداد از مقایسه کنار گذاشته می‌شن</span>
+        </div>
+
         {/* لیست نسخه‌ها */}
         <div className="max-h-72 overflow-y-auto border border-[#E5EBF3] rounded-[14px] p-2 mb-5 bg-[#F8FAFF]">
           {filteredVersions.length === 0 ? (
@@ -160,6 +176,7 @@ export default function ComparisonPage() {
             <div className="space-y-1.5">
               {filteredVersions.map((v) => {
                 const isSelected = selectedIds.includes(v.id);
+                const belowThreshold = minTrades > 0 && v.trades_count < minTrades;
                 return (
                   <label
                     key={v.id}
@@ -185,11 +202,18 @@ export default function ComparisonPage() {
                         </div>
                       </div>
                     </div>
-                    {isSelected && (
-                      <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-[#3F7CFF] text-white">
-                        انتخاب‌شده
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {belowThreshold && (
+                        <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#FFF8E5] text-[#946A1E] border border-[#F0DBA6]">
+                          کمتر از حدنصاب
+                        </span>
+                      )}
+                      {isSelected && (
+                        <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-[#3F7CFF] text-white">
+                          انتخاب‌شده
+                        </span>
+                      )}
+                    </div>
                   </label>
                 );
               })}
@@ -236,6 +260,19 @@ export default function ComparisonPage() {
                 <p className="text-[12px] text-[#6B7A94] mt-0.5">{comparison.items.length} نسخه</p>
               </div>
             </div>
+
+            {comparison.skipped && comparison.skipped.length > 0 && (
+              <div className="mb-5 bg-[#FFF8E5] border border-[#F0DBA6] rounded-[12px] p-4">
+                <div className="text-[13px] font-extrabold text-[#946A1E] mb-2">⚠️ این نسخه‌ها وارد مقایسه نشدن:</div>
+                <ul className="space-y-1">
+                  {comparison.skipped.map((s: any, idx: number) => (
+                    <li key={idx} className="text-[12px] text-[#946A1E]">
+                      • {s.version_name || `نسخه #${s.version_id}`} — {s.reason}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <div className="overflow-x-auto rounded-[14px] border border-[#E5EBF3]">
               <table className="w-full text-sm">
@@ -293,11 +330,75 @@ export default function ComparisonPage() {
                       </td>
                     ))}
                   </tr>
-                  <tr className="bg-[#EDF3FF]/50">
-                    <td className="py-4 px-5 text-[13px] text-[#1A2B47] font-extrabold">⭐ امتیاز کل</td>
+                  <tr className="border-b border-[#E5EBF3] hover:bg-[#F8FAFF] transition-colors">
+                    <td className="py-4 px-5 text-[13px] text-[#6B7A94] font-semibold">🎯 Net R</td>
                     {comparison.items.map((item: any) => (
-                      <td key={item.version_id} className={`py-4 px-5 text-[16px] ${getCellStyle(item, comparison.items, 'score')}`}>
-                        {item.score}
+                      <td key={item.version_id} className={`py-4 px-5 text-[14px] ${getCellStyle(item, comparison.items, 'net_r')}`}>
+                        {item.net_r} R
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="border-b border-[#E5EBF3] hover:bg-[#F8FAFF] transition-colors">
+                    <td className="py-4 px-5 text-[13px] text-[#6B7A94] font-semibold">📐 اکسپکتنسی</td>
+                    {comparison.items.map((item: any) => (
+                      <td key={item.version_id} className={`py-4 px-5 text-[14px] ${getCellStyle(item, comparison.items, 'expectancy')}`}>
+                        {item.expectancy} $ {item.expectancy_r !== null && item.expectancy_r !== undefined ? `(${item.expectancy_r} R)` : ''}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="border-b border-[#E5EBF3] hover:bg-[#F8FAFF] transition-colors">
+                    <td className="py-4 px-5 text-[13px] text-[#6B7A94] font-semibold">📈 میانگین برد / باخت</td>
+                    {comparison.items.map((item: any) => (
+                      <td key={item.version_id} className="py-4 px-5 text-[14px] font-semibold text-[#1A2B47]">
+                        +{item.avg_win} $ / -{item.avg_loss} $
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="border-b border-[#E5EBF3] hover:bg-[#F8FAFF] transition-colors">
+                    <td className="py-4 px-5 text-[13px] text-[#6B7A94] font-semibold">🚀 بزرگ‌ترین برد / باخت</td>
+                    {comparison.items.map((item: any) => (
+                      <td key={item.version_id} className="py-4 px-5 text-[14px] font-semibold text-[#1A2B47]">
+                        +{item.largest_win} $ / -{item.largest_loss} $
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="border-b border-[#E5EBF3] hover:bg-[#F8FAFF] transition-colors">
+                    <td className="py-4 px-5 text-[13px] text-[#6B7A94] font-semibold">🔻 بیشترین باخت متوالی</td>
+                    {comparison.items.map((item: any) => (
+                      <td key={item.version_id} className={`py-4 px-5 text-[14px] ${getCellStyle(item, comparison.items, 'max_consecutive_losses', false)}`}>
+                        {item.max_consecutive_losses}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="border-b border-[#E5EBF3] hover:bg-[#F8FAFF] transition-colors">
+                    <td className="py-4 px-5 text-[13px] text-[#6B7A94] font-semibold">⚖️ نسبت میانگین برد به باخت</td>
+                    {comparison.items.map((item: any) => (
+                      <td key={item.version_id} className="py-4 px-5 text-[14px] font-semibold text-[#1A2B47]">
+                        {item.consistency_analysis?.avg_win_avg_loss_ratio ?? '-'}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="border-b border-[#E5EBF3] hover:bg-[#F8FAFF] transition-colors">
+                    <td className="py-4 px-5 text-[13px] text-[#6B7A94] font-semibold">📉 انحراف معیار سود (یکنواختی)</td>
+                    {comparison.items.map((item: any) => (
+                      <td key={item.version_id} className="py-4 px-5 text-[14px] font-semibold text-[#1A2B47]">
+                        {item.consistency_analysis?.pnl_std_dev ?? '-'}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="border-b border-[#E5EBF3] hover:bg-[#F8FAFF] transition-colors">
+                    <td className="py-4 px-5 text-[13px] text-[#6B7A94] font-semibold">🎲 وابستگی به معاملات بزرگ</td>
+                    {comparison.items.map((item: any) => (
+                      <td key={item.version_id} className="py-4 px-5 text-[14px] font-semibold text-[#1A2B47]">
+                        {item.consistency_analysis?.top_trades_contribution_percent ?? '-'}٪ از ۳ معامله‌ی برتر
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="bg-[#EDF3FF]/50">
+                    <td className="py-4 px-5 text-[13px] text-[#1A2B47] font-extrabold">⭐ Health Score</td>
+                    {comparison.items.map((item: any) => (
+                      <td key={item.version_id} className={`py-4 px-5 text-[16px] ${getCellStyle(item, comparison.items, 'health_score')}`}>
+                        {item.health_score} / ۱۰۰
                       </td>
                     ))}
                   </tr>
@@ -405,9 +506,9 @@ export default function ComparisonPage() {
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className="text-[11px] text-[#6B7A94] font-semibold mb-1">امتیاز کل</div>
+                  <div className="text-[11px] text-[#6B7A94] font-semibold mb-1">Health Score</div>
                   <div className="text-[36px] font-extrabold accent-gradient-text leading-none">
-                    {comparison.best_score}
+                    {comparison.best_health_score} <span className="text-[16px]">/ ۱۰۰</span>
                   </div>
                 </div>
               </div>

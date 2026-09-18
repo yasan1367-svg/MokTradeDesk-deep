@@ -11,13 +11,13 @@ export default function ComparisonRadarChart({ items, height = 400 }: Comparison
   const maxPF = Math.max(...items.map((i) => i.profit_factor), 1);
   const maxPnL = Math.max(...items.map((i) => Math.abs(i.net_pnl)), 1);
   const maxDD = Math.max(...items.map((i) => i.max_dd), 1);
-  const maxScore = Math.max(...items.map((i) => i.score), 1);
+  const maxScore = Math.max(...items.map((i) => i.health_score), 1);
 
   const metrics = [
     { key: 'win_rate', label: 'نرخ برد', max: maxWinRate },
     { key: 'profit_factor', label: 'فاکتور سود', max: maxPF },
     { key: 'net_pnl', label: 'سود خالص', max: maxPnL },
-    { key: 'score', label: 'امتیاز', max: maxScore },
+    { key: 'health_score', label: 'Health Score', max: maxScore },
     { key: 'dd_inverse', label: 'کم بودن DD', max: maxDD },
   ];
 

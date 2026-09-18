@@ -27,6 +27,7 @@ class AnalysisService:
         weekday_analysis = self._analyze_by_weekday(trades)
         hour_analysis = self._analyze_by_hour(trades)
         custom_time_analysis = self._analyze_by_custom_intervals(trades)
+        consistency_analysis = self._calculate_consistency(trades)
 
         existing = self.db.query(AnalysisResult).filter(
             AnalysisResult.version_id == version_id
@@ -43,6 +44,14 @@ class AnalysisService:
             net_pnl=basic_metrics["net_pnl"],
             net_r=basic_metrics["net_r"],
             max_dd=basic_metrics["max_dd"],
+            expectancy=basic_metrics["expectancy"],
+            expectancy_r=basic_metrics["expectancy_r"],
+            avg_win=basic_metrics["avg_win"],
+            avg_loss=basic_metrics["avg_loss"],
+            largest_win=basic_metrics["largest_win"],
+            largest_loss=basic_metrics["largest_loss"],
+            max_consecutive_losses=basic_metrics["max_consecutive_losses"],
+            consistency_analysis=consistency_analysis,
             session_analysis=session_analysis,
             weekday_analysis=weekday_analysis,
             hour_analysis=hour_analysis,
@@ -57,20 +66,40 @@ class AnalysisService:
     # ═════════════════════════════════════════════
     # مقایسه‌ی چند نسخه
     # ═════════════════════════════════════════════
-    def compare_versions(self, version_ids: List[int]) -> Dict[str, Any]:
-        """مقایسه‌ی چند نسخه با پیشنهاد هوشمند و دلایل"""
+    def compare_versions(self, version_ids: List[int], min_trades: int = 0) -> Dict[str, Any]:
+        """
+        مقایسه‌ی چند نسخه با پیشنهاد هوشمند و دلایل.
+        min_trades: حداقل تعداد معامله برای ورود به مقایسه (فیلتر هوشمند) -
+        نسخه‌های کمتر از این حد وارد مقایسه نمی‌شن ولی توی skipped با دلیل گزارش می‌شن.
+        """
         items = []
+        skipped = []  # [{"version_id", "version_name", "reason"}]
+
         for vid in version_ids:
             version = self.db.query(StrategyVersion).filter(
                 StrategyVersion.id == vid
             ).first()
             if not version:
+                skipped.append({"version_id": vid, "version_name": None, "reason": "نسخه پیدا نشد"})
                 continue
 
             analysis = self.db.query(AnalysisResult).filter(
                 AnalysisResult.version_id == vid
             ).first()
             if not analysis:
+                skipped.append({
+                    "version_id": vid,
+                    "version_name": version.version_name,
+                    "reason": "این نسخه هنوز تحلیل نشده - اول «تحلیل مجدد» رو بزن",
+                })
+                continue
+
+            if min_trades and analysis.total_trades < min_trades:
+                skipped.append({
+                    "version_id": vid,
+                    "version_name": version.version_name,
+                    "reason": f"فقط {analysis.total_trades} معامله داره (کمتر از حد نصاب {min_trades} تا)",
+                })
                 continue
 
             strategy = self.db.query(Strategy).filter(
@@ -80,7 +109,7 @@ class AnalysisService:
             trades = self.db.query(Trade).filter(Trade.version_id == vid).all()
             symbols = list(set(t.symbol for t in trades if t.symbol))
 
-            score = self._calculate_score(analysis)
+            health_score = self._calculate_score(analysis)
 
             items.append({
                 "version_id": vid,
@@ -90,8 +119,17 @@ class AnalysisService:
                 "win_rate": analysis.win_rate,
                 "profit_factor": analysis.profit_factor,
                 "net_pnl": analysis.net_pnl,
+                "net_r": analysis.net_r,
                 "max_dd": analysis.max_dd,
-                "score": round(score, 2),
+                "expectancy": analysis.expectancy,
+                "expectancy_r": analysis.expectancy_r,
+                "avg_win": analysis.avg_win,
+                "avg_loss": analysis.avg_loss,
+                "largest_win": analysis.largest_win,
+                "largest_loss": analysis.largest_loss,
+                "max_consecutive_losses": analysis.max_consecutive_losses,
+                "consistency_analysis": analysis.consistency_analysis or {},
+                "health_score": round(health_score, 2),
                 "symbols": symbols,
                 "session_analysis": analysis.session_analysis or {},
                 "weekday_analysis": analysis.weekday_analysis or {},
@@ -100,9 +138,9 @@ class AnalysisService:
             })
 
         if not items:
-            raise ValueError("هیچ تحلیلی برای نسخه‌های انتخاب‌شده یافت نشد")
+            raise ValueError("هیچ نسخه‌ی قابل‌مقایسه‌ای یافت نشد (یا تحلیل نشده‌ن یا کمتر از حد نصاب معامله دارن)")
 
-        items.sort(key=lambda x: x["score"], reverse=True)
+        items.sort(key=lambda x: x["health_score"], reverse=True)
         best = items[0]
 
         reasons = self._build_reasons(best, items)
@@ -111,14 +149,15 @@ class AnalysisService:
 
         recommendation = (
             f"نسخه‌ی «{best['version_name']}» از استراتژی «{best['strategy_name']}» "
-            f"با امتیاز {best['score']} بهترین عملکرد را داشته است."
+            f"با امتیاز سلامت {best['health_score']} بهترین عملکرد را داشته است."
         )
 
         return {
             "items": items,
+            "skipped": skipped,
             "best_version_id": best["version_id"],
             "best_version_name": best["version_name"],
-            "best_score": best["score"],
+            "best_health_score": best["health_score"],
             "recommendation": recommendation,
             "reasons": reasons,
             "symbol_bests": symbol_bests,
@@ -169,7 +208,7 @@ class AnalysisService:
         if not reasons:
             reasons.append({
                 "icon": "📊",
-                "text": f"بهترین ترکیب کلی متریک‌ها با امتیاز {best_data['score']}",
+                "text": f"بهترین ترکیب کلی متریک‌ها با امتیاز سلامت {best_data['health_score']}",
             })
 
         return reasons
@@ -186,7 +225,7 @@ class AnalysisService:
 
         result = []
         for symbol, versions in symbols_data.items():
-            versions_sorted = sorted(versions, key=lambda x: x["score"], reverse=True)
+            versions_sorted = sorted(versions, key=lambda x: x["health_score"], reverse=True)
             best = versions_sorted[0]
 
             symbol_label = {
@@ -203,7 +242,7 @@ class AnalysisService:
                 "best_strategy": best["strategy_name"],
                 "win_rate": best["win_rate"],
                 "net_pnl": best["net_pnl"],
-                "score": best["score"],
+                "health_score": best["health_score"],
             })
 
         return result
@@ -321,7 +360,11 @@ class AnalysisService:
         return result
 
     def _calculate_score(self, analysis: AnalysisResult) -> float:
-        """محاسبه‌ی امتیاز ترکیبی برای رتبه‌بندی"""
+        """
+        محاسبه‌ی Health Score (۰ تا ۱۰۰) بر پایه‌ی نرخ برد، فاکتور سود، سود خالص و افت سرمایه.
+        (فاکتور سود همیشه بین ۰ تا ۱۰۰ سقف داره - نگاه کن به _profit_factor - پس این فرمول
+        همیشه بین ۰ و ۱۰۰ می‌مونه)
+        """
         win_rate_score = min(analysis.win_rate, 100)
         profit_factor_score = min(analysis.profit_factor * 20, 100)
         net_pnl_score = min(max(analysis.net_pnl, 0) / 10, 100)
@@ -334,7 +377,7 @@ class AnalysisService:
             dd_penalty * 0.20
         )
 
-        return max(score, 0)
+        return max(min(score, 100), 0)
 
     # ═════════════════════════════════════════════
     # پیشرفت مرحله‌ی پراپ
@@ -432,12 +475,25 @@ class AnalysisService:
 
         net_pnl = sum(t.pnl for t in trades if t.pnl) or 0
         win_rate = (len(wins) / total * 100) if total > 0 else 0
-        profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else 0
+        profit_factor = self._profit_factor(gross_profit, gross_loss)
 
         r_multiples = [t.r_multiple for t in trades if t.r_multiple is not None]
         net_r = sum(r_multiples) if r_multiples else 0
 
         max_dd = self._calculate_max_drawdown(trades)
+
+        # اکسپکتنسی، میانگین/بزرگ‌ترین برد و باخت
+        avg_win = (gross_profit / len(wins)) if wins else 0
+        avg_loss = (gross_loss / len(losses)) if losses else 0  # مقدار مثبت
+        largest_win = max((t.pnl for t in wins), default=0)
+        largest_loss = abs(min((t.pnl for t in losses), default=0))  # مقدار مثبت
+
+        win_rate_ratio = (len(wins) / total) if total > 0 else 0
+        loss_rate_ratio = (len(losses) / total) if total > 0 else 0
+        expectancy = (win_rate_ratio * avg_win) - (loss_rate_ratio * avg_loss)
+        expectancy_r = (sum(r_multiples) / len(r_multiples)) if r_multiples else None
+
+        max_consecutive_losses = self._calculate_max_consecutive_losses(trades)
 
         return {
             "total_trades": total,
@@ -446,6 +502,78 @@ class AnalysisService:
             "net_pnl": round(net_pnl, 2),
             "net_r": round(net_r, 2),
             "max_dd": round(max_dd, 2),
+            "expectancy": round(expectancy, 2),
+            "expectancy_r": round(expectancy_r, 3) if expectancy_r is not None else None,
+            "avg_win": round(avg_win, 2),
+            "avg_loss": round(avg_loss, 2),
+            "largest_win": round(largest_win, 2),
+            "largest_loss": round(largest_loss, 2),
+            "max_consecutive_losses": max_consecutive_losses,
+        }
+
+    def _profit_factor(self, gross_profit: float, gross_loss: float) -> float:
+        """
+        فاکتور سود = سود ناخالص / ضرر ناخالص.
+        اگه هیچ معامله‌ی بازنده‌ای نباشه (gross_loss == 0) ولی سود مثبت باشه،
+        این عملاً بهترین حالت ممکنه - قبلاً اشتباهاً صفر برمی‌گشت که توی امتیازدهی
+        باعث می‌شد این نسخه بدترین امتیاز رو بگیره. اینجا یه سقف منطقی (۱۰۰) می‌ذاریم
+        تا هم عدد قابل‌نمایش/JSON-safe باشه، هم توی فرمول امتیاز درست حساب بشه.
+        """
+        if gross_loss > 0:
+            return gross_profit / gross_loss
+        if gross_profit > 0:
+            return 100.0
+        return 0.0
+
+    def _calculate_max_consecutive_losses(self, trades: List[Trade]) -> int:
+        sorted_trades = sorted(trades, key=lambda t: t.close_time or t.open_time)
+        streak = 0
+        max_streak = 0
+        for t in sorted_trades:
+            if t.pnl is not None and t.pnl < 0:
+                streak += 1
+                max_streak = max(max_streak, streak)
+            elif t.pnl is not None and t.pnl > 0:
+                streak = 0
+            # معامله‌ی سربه‌سر (pnl == 0) استریک رو نمی‌شکنه و اضافه‌ش هم نمی‌کنه
+        return max_streak
+
+    def _calculate_consistency(self, trades: List[Trade]) -> Dict[str, Any]:
+        """
+        تحلیل پایداری:
+        - pnl_std_dev: انحراف معیار سود/زیان معاملات (یکنواختی سودها)
+        - top_trades_contribution_percent: چند درصد از کل سود ناخالص از چند معامله‌ی برتر اومده
+          (وابستگی به معاملات بزرگ)
+        - avg_win_avg_loss_ratio: نسبت میانگین برد به میانگین باخت
+        """
+        wins = [t for t in trades if t.pnl and t.pnl > 0]
+        losses = [t for t in trades if t.pnl and t.pnl < 0]
+        pnl_values = [t.pnl for t in trades if t.pnl is not None]
+
+        if not pnl_values:
+            return {
+                "pnl_std_dev": 0,
+                "top_trades_contribution_percent": 0,
+                "avg_win_avg_loss_ratio": 0,
+            }
+
+        mean_pnl = sum(pnl_values) / len(pnl_values)
+        variance = sum((p - mean_pnl) ** 2 for p in pnl_values) / len(pnl_values)
+        pnl_std_dev = variance ** 0.5
+
+        gross_profit = sum(t.pnl for t in wins) if wins else 0
+        top_n = sorted((t.pnl for t in wins), reverse=True)[:3]
+        top_trades_contribution = (sum(top_n) / gross_profit * 100) if gross_profit > 0 else 0
+
+        avg_win = (gross_profit / len(wins)) if wins else 0
+        gross_loss = abs(sum(t.pnl for t in losses)) if losses else 0
+        avg_loss = (gross_loss / len(losses)) if losses else 0
+        avg_win_avg_loss_ratio = (avg_win / avg_loss) if avg_loss > 0 else 0
+
+        return {
+            "pnl_std_dev": round(pnl_std_dev, 2),
+            "top_trades_contribution_percent": round(top_trades_contribution, 1),
+            "avg_win_avg_loss_ratio": round(avg_win_avg_loss_ratio, 2),
         }
 
     def _calculate_max_drawdown(self, trades: List[Trade]) -> float:
@@ -544,7 +672,7 @@ class AnalysisService:
 
         net_pnl = sum(t.pnl for t in trades if t.pnl) or 0
         win_rate = (len(wins) / total * 100) if total > 0 else 0
-        profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else 0
+        profit_factor = self._profit_factor(gross_profit, gross_loss)
 
         return {
             "total_trades": total,

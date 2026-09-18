@@ -56,6 +56,14 @@ def get_analysis(version_id: int, db: Session = Depends(get_db)):
         "net_pnl": result.net_pnl,
         "net_r": result.net_r,
         "max_dd": result.max_dd,
+        "expectancy": result.expectancy,
+        "expectancy_r": result.expectancy_r,
+        "avg_win": result.avg_win,
+        "avg_loss": result.avg_loss,
+        "largest_win": result.largest_win,
+        "largest_loss": result.largest_loss,
+        "max_consecutive_losses": result.max_consecutive_losses,
+        "consistency_analysis": result.consistency_analysis,
         "session_analysis": result.session_analysis,
         "weekday_analysis": result.weekday_analysis,
         "hour_analysis": result.hour_analysis,
@@ -72,7 +80,7 @@ def compare_versions(request: VersionComparisonRequest, db: Session = Depends(ge
     """مقایسه‌ی چند نسخه و پیشنهاد بهترین"""
     try:
         service = AnalysisService(db)
-        result = service.compare_versions(request.version_ids)
+        result = service.compare_versions(request.version_ids, min_trades=request.min_trades or 0)
         return result
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

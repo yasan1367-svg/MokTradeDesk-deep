@@ -16,6 +16,7 @@ class StrategyStatus(str, enum.Enum):
     FORWARD = "forward"
     APPROVED = "approved"
     LIVE = "live"
+    REVIEW = "review"
     DEPRECATED = "deprecated"
     ARCHIVED = "archived"
     REJECTED = "rejected"
@@ -59,9 +60,13 @@ class StrategyVersion(Base):
     version_name = Column(String, nullable=False)
     rules_note = Column(Text, nullable=True)
     status = Column(Enum(StrategyStatus), default=StrategyStatus.RESEARCH)
+    # زیرساخت Fork: اگه این نسخه از روی نسخه‌ی دیگه‌ای ساخته شده، اینجا لینک می‌شه
+    # (خودِ قابلیت Fork - دکمه/endpoint - بعداً و جدا پیاده می‌شه، این فقط ستونشه)
+    forked_from_version_id = Column(Integer, ForeignKey("strategy_versions.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     strategy = relationship("Strategy", back_populates="versions")
+    forked_from = relationship("StrategyVersion", remote_side=[id])
     trades = relationship(
         "Trade",
         back_populates="version",
@@ -156,6 +161,16 @@ class AnalysisResult(Base):
     net_pnl = Column(Float, default=0.0)
     net_r = Column(Float, default=0.0)
     max_dd = Column(Float, default=0.0)
+
+    # متریک‌های جدید
+    expectancy = Column(Float, default=0.0)              # اکسپکتنسی دلاری (به ازای هر معامله)
+    expectancy_r = Column(Float, nullable=True)           # اکسپکتنسی بر حسب R (اگه SL ثبت شده باشه)
+    avg_win = Column(Float, default=0.0)
+    avg_loss = Column(Float, default=0.0)                 # مقدار مثبت (اندازه‌ی ضرر)
+    largest_win = Column(Float, default=0.0)
+    largest_loss = Column(Float, default=0.0)             # مقدار مثبت (اندازه‌ی ضرر)
+    max_consecutive_losses = Column(Integer, default=0)
+    consistency_analysis = Column(JSON, nullable=True)    # {pnl_std_dev, top_trades_contribution_percent, avg_win_avg_loss_ratio}
 
     session_analysis = Column(JSON, nullable=True)
     weekday_analysis = Column(JSON, nullable=True)

@@ -25,12 +25,12 @@ export const analyzeVersion = (versionId: number) =>
   api.post(`/api/analytics/analyze/${versionId}`);
 export const getAnalysis = (versionId: number) =>
   api.get(`/api/analytics/${versionId}`);
-export const compareVersions = (versionIds: number[]) =>
-  api.post('/api/analytics/compare', { version_ids: versionIds });
+export const compareVersions = (versionIds: number[], minTrades: number = 0) =>
+  api.post('/api/analytics/compare', { version_ids: versionIds, min_trades: minTrades });
 export const getIntervals = (symbol?: string) =>
   api.get('/api/analytics/intervals/', { params: symbol ? { symbol } : {} });
-export const compareVersionsWithDetails = (versionIds: number[]) =>
-  api.post('/api/analytics/compare', { version_ids: versionIds });
+export const compareVersionsWithDetails = (versionIds: number[], minTrades: number = 0) =>
+  api.post('/api/analytics/compare', { version_ids: versionIds, min_trades: minTrades });
 export const getPropAnalytics = () => api.get('/api/prop/analytics');
 
 // ─────────────────────────────────────────────

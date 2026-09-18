@@ -66,6 +66,7 @@ class TimePointResponse(BaseModel):
 # ═════════════════════════════════════════════
 class VersionComparisonRequest(BaseModel):
     version_ids: List[int]
+    min_trades: Optional[int] = 0  # فیلتر هوشمند: حداقل تعداد معامله برای ورود به مقایسه
 
 
 class VersionComparisonItem(BaseModel):
@@ -76,13 +77,28 @@ class VersionComparisonItem(BaseModel):
     win_rate: float
     profit_factor: float
     net_pnl: float
+    net_r: float
     max_dd: float
-    score: float
+    expectancy: float
+    expectancy_r: Optional[float] = None
+    avg_win: float
+    avg_loss: float
+    largest_win: float
+    largest_loss: float
+    max_consecutive_losses: int
+    consistency_analysis: Optional[dict] = None
+    health_score: float
     symbols: List[str] = []
     session_analysis: Optional[dict] = None
     weekday_analysis: Optional[dict] = None
     hour_analysis: Optional[dict] = None
     custom_time_analysis: Optional[dict] = None
+
+
+class SkippedItem(BaseModel):
+    version_id: int
+    version_name: Optional[str] = None
+    reason: str
 
 
 class ReasonItem(BaseModel):
@@ -98,7 +114,7 @@ class SymbolBest(BaseModel):
     best_strategy: str
     win_rate: float
     net_pnl: float
-    score: float
+    health_score: float
 
 
 class DetailBest(BaseModel):
@@ -115,9 +131,10 @@ class DetailBests(BaseModel):
 
 class VersionComparisonResponse(BaseModel):
     items: List[VersionComparisonItem]
+    skipped: List[SkippedItem] = []
     best_version_id: int
     best_version_name: str
-    best_score: float
+    best_health_score: float
     recommendation: str
     reasons: List[ReasonItem] = []
     symbol_bests: List[SymbolBest] = []

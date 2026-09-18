@@ -175,6 +175,63 @@ export default function AnalysisPage() {
             />
           </div>
 
+          {/* متریک‌های تکمیلی */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+            <MetricCard
+              label="🎯 Net R"
+              value={`${analysis.net_r} R`}
+              sub="مجموع R-Multiple معاملات"
+              color={analysis.net_r >= 0 ? 'profit' : 'loss'}
+              icon="🎯"
+            />
+            <MetricCard
+              label="📐 اکسپکتنسی"
+              value={`${analysis.expectancy} $`}
+              sub={analysis.expectancy_r !== null && analysis.expectancy_r !== undefined ? `${analysis.expectancy_r} R به‌ازای هر معامله` : 'به‌ازای هر معامله'}
+              color={analysis.expectancy >= 0 ? 'profit' : 'loss'}
+              icon="📐"
+            />
+            <MetricCard
+              label="📊 میانگین برد / باخت"
+              value={`+${analysis.avg_win} / -${analysis.avg_loss}`}
+              sub={`بزرگ‌ترین: +${analysis.largest_win} / -${analysis.largest_loss}`}
+              icon="📊"
+            />
+            <MetricCard
+              label="🔻 بیشترین باخت متوالی"
+              value={analysis.max_consecutive_losses}
+              sub={
+                analysis.consistency_analysis
+                  ? `نسبت برد/باخت: ${analysis.consistency_analysis.avg_win_avg_loss_ratio}`
+                  : undefined
+              }
+              color="loss"
+              icon="🔻"
+            />
+          </div>
+
+          {analysis.consistency_analysis && (
+            <div className="glass-card p-5 mb-6">
+              <div className="text-text-secondary text-sm mb-3">📉 تحلیل پایداری (Consistency)</div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <div className="text-text-secondary text-xs mb-1">انحراف معیار سود معاملات</div>
+                  <div className="font-bold text-text-primary">{analysis.consistency_analysis.pnl_std_dev} $</div>
+                </div>
+                <div>
+                  <div className="text-text-secondary text-xs mb-1">وابستگی به معاملات بزرگ</div>
+                  <div className="font-bold text-text-primary">
+                    {analysis.consistency_analysis.top_trades_contribution_percent}٪ از سود از ۳ معامله‌ی برتر
+                  </div>
+                </div>
+                <div>
+                  <div className="text-text-secondary text-xs mb-1">نسبت میانگین برد به باخت</div>
+                  <div className="font-bold text-text-primary">{analysis.consistency_analysis.avg_win_avg_loss_ratio}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
 {/* نمودارها */}
 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
   <GlassCard className="lg:col-span-2">

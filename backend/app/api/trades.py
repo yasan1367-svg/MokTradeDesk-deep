@@ -9,6 +9,7 @@ import hashlib
 from ..core.database import get_db
 from ..models.strategy import Trade, TradeSource, TestType, StrategyVersion, Strategy
 from ..models.personal import Screenshot
+from ..utils.trade_metrics import calculate_r_multiple
 
 router = APIRouter()
 
@@ -35,6 +36,7 @@ class ManualTradeCreate(BaseModel):
     sl: Optional[float] = None
     tp: Optional[float] = None
     pnl: Optional[float] = None
+    r_multiple: Optional[float] = None  # اگه خالی بمونه و SL وارد شده باشه، خودکار محاسبه می‌شه
     commission: Optional[float] = 0.0
     swap: Optional[float] = 0.0
     version_id: Optional[int] = None
@@ -245,6 +247,10 @@ def create_manual_trade(data: ManualTradeCreate, db: Session = Depends(get_db)):
     }
     test_type = test_type_map.get(data.test_type, TestType.BACKTEST)
 
+    r_multiple = data.r_multiple
+    if r_multiple is None:
+        r_multiple = calculate_r_multiple(direction, data.open_price, data.close_price, data.sl)
+
     trade = Trade(
         symbol=data.symbol,
         direction=direction,
@@ -256,6 +262,7 @@ def create_manual_trade(data: ManualTradeCreate, db: Session = Depends(get_db)):
         sl=data.sl,
         tp=data.tp,
         pnl=data.pnl,
+        r_multiple=r_multiple,
         commission=data.commission or 0,
         swap=data.swap or 0,
         version_id=data.version_id,

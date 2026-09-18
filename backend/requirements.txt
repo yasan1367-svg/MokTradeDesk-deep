@@ -4,3 +4,5 @@ sqlalchemy
 alembic
 python-multipart
 openpyxl
+beautifulsoup4
+pydantic-settings
