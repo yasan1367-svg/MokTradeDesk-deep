@@ -10,6 +10,7 @@ from ..core.database import get_db
 from ..models.strategy import Trade, TradeSource, TestType, StrategyVersion, Strategy
 from ..models.personal import Screenshot
 from ..utils.trade_metrics import calculate_r_multiple
+from ..utils.trade_validator import TradeValidator
 
 router = APIRouter()
 
